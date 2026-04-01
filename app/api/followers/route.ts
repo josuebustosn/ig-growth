@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getInstagramProfile } from '@/lib/instagram-service';
-import { saveDailyStats } from '@/lib/storage';
+import { saveDailyStats, getCachedProfile } from '@/lib/storage';
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
@@ -19,8 +19,12 @@ export async function GET(request: Request) {
     // Save stats and get updated history
     const history = saveDailyStats(username, profile.followers);
 
+    // Get real lastUpdated from cache (when Apify actually scraped)
+    const cached = getCachedProfile(username);
+
     return NextResponse.json({
         profile,
-        history
+        history,
+        lastUpdated: cached?.lastUpdated || Date.now()
     });
 }

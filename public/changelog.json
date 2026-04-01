@@ -1,5 +1,64 @@
 [
     {
+        "version": "1.3.1",
+        "date": "2026-04-01",
+        "title": "Pulido Visual y Skeleton Loading",
+        "changes": [
+            {
+                "type": "feature",
+                "description": "💀 Skeleton loading en todos los bloques del dashboard durante la carga inicial"
+            },
+            {
+                "type": "feature",
+                "description": "🎨 Layout rediseñado: contador de seguidores centrado como hero, crecimiento y calculadora lado a lado"
+            },
+            {
+                "type": "feature",
+                "description": "🌙 Modo claro rediseñado: fondo gris suave en vez de blanco puro"
+            },
+            {
+                "type": "fix",
+                "description": "⏱️ 'Actualizado hace...' ahora muestra la hora real del último scraping de Apify"
+            },
+            {
+                "type": "fix",
+                "description": "Corrección de pluralización en español ('1 horas' → '1 hora')"
+            },
+            {
+                "type": "fix",
+                "description": "Eliminado flash de '0' al cargar el contador de seguidores"
+            },
+            {
+                "type": "fix",
+                "description": "La página ahora vuelve al inicio al recargar"
+            },
+            {
+                "type": "feature",
+                "description": "🎯 Selector de periodo custom con animación dropdown (reemplaza select nativo)"
+            },
+            {
+                "type": "feature",
+                "description": "✨ Animaciones escalonadas en el calendario al cambiar de periodo"
+            },
+            {
+                "type": "feature",
+                "description": "💰 Animación numérica en la calculadora al alterar el CPF"
+            },
+            {
+                "type": "feature",
+                "description": "📋 Changelog con skeleton loading y animaciones de entrada escalonadas"
+            },
+            {
+                "type": "fix",
+                "description": "🖼️ Logo PNG transparente correcto en imagen compartida"
+            },
+            {
+                "type": "fix",
+                "description": "🎨 Eliminado flash de tema incorrecto al navegar entre páginas"
+            }
+        ]
+    },
+    {
         "version": "1.3",
         "date": "2026-02-01",
         "title": "Milestones Dinámicos y Proyección Inteligente",

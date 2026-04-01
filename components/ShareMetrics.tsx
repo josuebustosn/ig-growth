@@ -70,7 +70,7 @@ function applyBoxBlur(ctx: CanvasRenderingContext2D, width: number, height: numb
     ctx.putImageData(imageData, 0, 0);
 }
 
-export default function ShareMetrics({ currentFollowers, history, username }: ShareMetricsProps) {
+export default function ShareMetrics({ currentFollowers, history, username, loading = false }: ShareMetricsProps & { loading?: boolean }) {
     const [period, setPeriod] = useState<Period>('today');
     const [isGenerating, setIsGenerating] = useState(false);
     const [successType, setSuccessType] = useState<'copy' | 'download' | 'share' | null>(null);
@@ -164,7 +164,7 @@ export default function ShareMetrics({ currentFollowers, history, username }: Sh
         });
 
         // Draw logo (top right, smaller, more transparent)
-        const logoSize = 40;
+        const logoSize = 28;
         ctx.globalAlpha = 0.6;
         ctx.drawImage(logo, size - logoSize - 40, 30, logoSize, logoSize);
         ctx.globalAlpha = 1.0;
@@ -324,6 +324,30 @@ export default function ShareMetrics({ currentFollowers, history, username }: Sh
         return type === 'copy' ? '📋 Copiar imagen' : '💾 Descargar imagen';
     };
 
+    if (loading) {
+        const shimmerStyle = {
+            background: 'linear-gradient(90deg, var(--card-bg) 25%, var(--card-border) 50%, var(--card-bg) 75%)',
+            backgroundSize: '200% 100%',
+            animation: 'shimmer 1.5s infinite',
+            borderRadius: '8px'
+        };
+        return (
+            <div className="glass-panel" style={{ padding: '1.5rem' }}>
+                <div style={{ ...shimmerStyle, width: '180px', height: '24px', marginBottom: '1rem' }} />
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                    {[1, 2, 3].map(i => (
+                        <div key={i} style={{ ...shimmerStyle, flex: 1, height: '36px' }} />
+                    ))}
+                </div>
+                <div style={{ ...shimmerStyle, width: '100%', height: '120px', marginBottom: '1rem' }} />
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <div style={{ ...shimmerStyle, flex: 1, height: '42px' }} />
+                    <div style={{ ...shimmerStyle, flex: 1, height: '42px' }} />
+                </div>
+            </div>
+        );
+    }
+
     const periods: { value: Period; label: string }[] = [
         { value: 'today', label: 'Hoy' },
         { value: 'week', label: 'Semana' },
@@ -335,7 +359,7 @@ export default function ShareMetrics({ currentFollowers, history, username }: Sh
             <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>📤 Compartir Logros</h3>
 
             {/* Period Selector */}
-            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', position: 'relative' }}>
                 {periods.map((p) => (
                     <button
                         key={p.value}
@@ -344,14 +368,19 @@ export default function ShareMetrics({ currentFollowers, history, username }: Sh
                             flex: 1,
                             padding: '0.5rem',
                             borderRadius: '8px',
-                            border: 'none',
+                            border: period === p.value
+                                ? '1px solid var(--primary)'
+                                : '1px solid var(--card-border)',
                             cursor: 'pointer',
                             background: period === p.value
-                                ? 'linear-gradient(135deg, var(--primary), var(--accent))'
-                                : 'var(--card-bg)',
-                            color: period === p.value ? 'white' : 'var(--text-muted)',
+                                ? 'rgba(50, 145, 255, 0.12)'
+                                : 'transparent',
+                            color: period === p.value ? 'var(--primary)' : 'var(--text-muted)',
                             fontWeight: period === p.value ? '600' : '400',
-                            transition: 'all 0.2s ease',
+                            transition: 'all 0.25s ease',
+                            boxShadow: period === p.value
+                                ? '0 0 12px rgba(50, 145, 255, 0.2)'
+                                : 'none',
                         }}
                     >
                         {p.label}
@@ -367,19 +396,21 @@ export default function ShareMetrics({ currentFollowers, history, username }: Sh
                 marginBottom: '1rem',
                 textAlign: 'center'
             }}>
-                <p style={{ fontSize: '0.8rem', color: '#a1a1a1', marginBottom: '0.5rem' }}>
-                    {getMetrics().dateRange}
-                </p>
-                <p style={{
-                    fontSize: '2rem',
-                    fontWeight: 'bold',
-                    color: getMetrics().change >= 0 ? '#34d399' : '#f87171'
-                }}>
-                    {getMetrics().change >= 0 ? '+' : ''}{getMetrics().change}
-                </p>
-                <p style={{ fontSize: '0.9rem', color: 'white' }}>
-                    seguidores {getMetrics().label.toLowerCase()}
-                </p>
+                <div key={period} style={{ animation: 'fadeIn 0.3s ease-out' }}>
+                    <p style={{ fontSize: '0.8rem', color: '#a1a1a1', marginBottom: '0.5rem' }}>
+                        {getMetrics().dateRange}
+                    </p>
+                    <p style={{
+                        fontSize: '2rem',
+                        fontWeight: 'bold',
+                        color: getMetrics().change >= 0 ? '#34d399' : '#f87171'
+                    }}>
+                        {getMetrics().change >= 0 ? '+' : ''}{getMetrics().change}
+                    </p>
+                    <p style={{ fontSize: '0.9rem', color: 'white' }}>
+                        seguidores {getMetrics().label.toLowerCase()}
+                    </p>
+                </div>
             </div>
 
             {/* Actions */}
@@ -391,10 +422,10 @@ export default function ShareMetrics({ currentFollowers, history, username }: Sh
                         flex: 1,
                         padding: '0.7rem',
                         borderRadius: '8px',
-                        border: 'none',
                         cursor: 'pointer',
-                        background: 'var(--primary)',
-                        color: 'white',
+                        background: 'rgba(50, 145, 255, 0.15)',
+                        border: '1px solid var(--primary)',
+                        color: 'var(--primary)',
                         fontWeight: '600',
                         transition: 'all 0.2s ease',
                     }}

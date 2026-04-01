@@ -23,9 +23,10 @@ interface DailyStats {
 interface ProjectionChartProps {
     history: DailyStats[];
     currentFollowers: number;
+    loading?: boolean;
 }
 
-export default function ProjectionChart({ history, currentFollowers }: ProjectionChartProps) {
+export default function ProjectionChart({ history, currentFollowers, loading = false }: ProjectionChartProps) {
     const [simulatedGrowth, setSimulatedGrowth] = useState<string>('');
 
     // Milestones (same as Calculators)
@@ -158,6 +159,29 @@ export default function ProjectionChart({ history, currentFollowers }: Projectio
 
         return chartData;
     }, [history, simulatedGrowth, smartAvgGrowth, nextMilestone]);
+
+    if (loading) {
+        const shimmerStyle = {
+            background: 'linear-gradient(90deg, var(--card-bg) 25%, var(--card-border) 50%, var(--card-bg) 75%)',
+            backgroundSize: '200% 100%',
+            animation: 'shimmer 1.5s infinite',
+            borderRadius: '8px'
+        };
+        return (
+            <div className="glass-panel" style={{ padding: '2rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+                    <div style={{ ...shimmerStyle, width: '250px', height: '28px' }} />
+                    <div style={{ ...shimmerStyle, width: '200px', height: '32px' }} />
+                </div>
+                <div style={{ ...shimmerStyle, width: '100%', height: '400px', marginBottom: '1.5rem' }} />
+                <div style={{ ...shimmerStyle, width: '100%', height: '80px', marginBottom: '1rem' }} />
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <div style={{ ...shimmerStyle, width: '80px', height: '28px', borderRadius: '12px' }} />
+                    <div style={{ ...shimmerStyle, width: '80px', height: '28px', borderRadius: '12px' }} />
+                </div>
+            </div>
+        );
+    }
 
     if (history.length === 0) {
         return (

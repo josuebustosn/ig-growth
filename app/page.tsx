@@ -20,22 +20,42 @@ interface DashboardData {
   lastUpdated?: number;
 }
 
+// Module-level cache: survives component remounts (back navigation)
+let cachedData: DashboardData | null = null;
+let cachedLastFetch: number | null = null;
+
 export default function Home() {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<DashboardData | null>(cachedData);
+  const [loading, setLoading] = useState(!cachedData);
   const [error, setError] = useState('');
-  const [lastFetch, setLastFetch] = useState<number | null>(null);
+  const [lastFetch, setLastFetch] = useState<number | null>(cachedLastFetch);
 
   const username = process.env.NEXT_PUBLIC_INSTAGRAM_USERNAME || 'trawi.viajes';
 
   useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  useEffect(() => {
+    const showSkeleton = !cachedData;
+
     const fetchData = async () => {
       try {
-        const res = await fetch(`/api/followers?username=${username}`);
-        if (!res.ok) throw new Error('Failed to fetch');
-        const json = await res.json();
-        setData(json);
-        setLastFetch(Date.now());
+        const fetchPromise = fetch(`/api/followers?username=${username}`).then(res => {
+          if (!res.ok) throw new Error('Failed to fetch');
+          return res.json();
+        });
+
+        // Skeleton visible for at least 500ms only on first load ever
+        const [json] = await Promise.all([
+          fetchPromise,
+          ...(showSkeleton ? [new Promise(r => setTimeout(r, 500))] : [])
+        ]);
+
+        cachedData = json;
+        cachedLastFetch = json.lastUpdated || Date.now();
+        setData(cachedData);
+        setLastFetch(cachedLastFetch);
         setError('');
       } catch (err) {
         console.error(err);
@@ -46,9 +66,9 @@ export default function Home() {
     };
 
     fetchData();
-    const interval = setInterval(fetchData, 60000); // Update every 60s
+    const interval = setInterval(fetchData, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [username]);
 
   // Calculate today's change from history
   const getTodayChange = (): number => {
@@ -75,7 +95,7 @@ export default function Home() {
             style={{ borderRadius: '8px', transition: 'transform 0.2s ease' }}
             className="logo-hover"
           />
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>TrawiStats 1.3</h1>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>TrawiStats 1.3.1</h1>
         </a>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <a
@@ -98,8 +118,8 @@ export default function Home() {
       </header>
 
       <div className="grid" style={{ gap: '2rem' }}>
-        {/* Top Section: Counter and Calendar */}
-        <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
+        {/* Top Section: Counter centered hero */}
+        <section>
           <FollowerCounter
             username={username}
             followers={data?.profile?.followers || 0}
@@ -108,22 +128,24 @@ export default function Home() {
             todayChange={getTodayChange()}
             lastUpdated={lastFetch || undefined}
           />
-          <GrowthCalendar history={data?.history || []} />
-        </div>
+        </section>
 
-        {/* Bottom Section: Calculators */}
-        <section>
+        {/* Growth + Calculators side by side */}
+        <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
+          <GrowthCalendar history={data?.history || []} loading={loading && !data} />
           <Calculators
             currentFollowers={data?.profile?.followers || 0}
             history={data?.history || []}
+            loading={loading && !data}
           />
-        </section>
+        </div>
 
         {/* Projection Chart */}
         <section>
           <ProjectionChart
             currentFollowers={data?.profile?.followers || 0}
             history={data?.history || []}
+            loading={loading && !data}
           />
         </section>
 
@@ -133,6 +155,7 @@ export default function Home() {
             currentFollowers={data?.profile?.followers || 0}
             history={data?.history || []}
             username={username}
+            loading={loading && !data}
           />
         </section>
       </div>

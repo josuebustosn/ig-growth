@@ -39,7 +39,7 @@ export default function ThemeToggle() {
             }}
             aria-label="Toggle Theme"
         >
-            {theme === 'dark' ? '🌙' : '☀️'}
+            {theme === 'dark' ? '🌙' : '🌑'}
         </button>
     );
 }

@@ -20,6 +20,7 @@ function useAnimatedNumber(target: number, duration: number = 1000) {
         if (target === 0) return;
 
         const start = previousTarget.current || Math.max(0, target - 100);
+        setCurrent(start); // Avoid flash of 0
         const difference = target - start;
         const startTime = performance.now();
 
@@ -52,8 +53,10 @@ function formatTimeAgo(timestamp: number): string {
 
     if (seconds < 60) return 'hace menos de 1 min';
     if (seconds < 3600) return `hace ${Math.floor(seconds / 60)} min`;
-    if (seconds < 86400) return `hace ${Math.floor(seconds / 3600)} horas`;
-    return `hace ${Math.floor(seconds / 86400)} días`;
+    const hours = Math.floor(seconds / 3600);
+    if (seconds < 86400) return `hace ${hours} ${hours === 1 ? 'hora' : 'horas'}`;
+    const days = Math.floor(seconds / 86400);
+    return `hace ${days} ${days === 1 ? 'día' : 'días'}`;
 }
 
 export default function FollowerCounter({
@@ -81,34 +84,31 @@ export default function FollowerCounter({
         return () => clearInterval(interval);
     }, [lastUpdated]);
 
-    if (loading) {
+    if (loading || (followers > 0 && animatedFollowers === 0)) {
+        const shimmerStyle = {
+            background: 'linear-gradient(90deg, var(--card-bg) 25%, var(--card-border) 50%, var(--card-bg) 75%)',
+            backgroundSize: '200% 100%',
+            animation: 'shimmer 1.5s infinite'
+        };
         return (
-            <div className="glass-panel" style={{ padding: '3rem', textAlign: 'center' }}>
-                {/* Skeleton loader */}
-                <div style={{
-                    width: '200px',
-                    height: '80px',
-                    background: 'linear-gradient(90deg, var(--card-bg) 25%, var(--card-border) 50%, var(--card-bg) 75%)',
-                    backgroundSize: '200% 100%',
-                    animation: 'shimmer 1.5s infinite',
-                    borderRadius: '12px',
-                    margin: '0 auto 1rem'
-                }} />
-                <div style={{
-                    width: '100px',
-                    height: '24px',
-                    background: 'linear-gradient(90deg, var(--card-bg) 25%, var(--card-border) 50%, var(--card-bg) 75%)',
-                    backgroundSize: '200% 100%',
-                    animation: 'shimmer 1.5s infinite',
-                    borderRadius: '6px',
-                    margin: '0 auto'
-                }} />
+            <div className="glass-panel follower-counter-box" style={{
+                padding: '3rem',
+                textAlign: 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem'
+            }}>
+                <div style={{ ...shimmerStyle, width: '280px', height: '5rem', borderRadius: '12px' }} />
+                <div style={{ ...shimmerStyle, width: '160px', height: '1.8rem', borderRadius: '6px' }} />
+                <div style={{ ...shimmerStyle, width: '140px', height: '1.2rem', borderRadius: '6px', marginTop: '0.5rem' }} />
             </div>
         );
     }
 
     return (
-        <div className="glass-panel" style={{
+        <div className="glass-panel follower-counter-box" style={{
             padding: '3rem',
             textAlign: 'center',
             display: 'flex',
@@ -116,10 +116,10 @@ export default function FollowerCounter({
             alignItems: 'center',
             gap: '0.5rem'
         }}>
-            <h1 className="text-gradient" style={{ fontSize: '5rem', fontWeight: '800', lineHeight: 1 }}>
+            <h1 className="text-gradient fade-in" style={{ fontSize: '5rem', fontWeight: '800', lineHeight: 1 }}>
                 {animatedFollowers.toLocaleString('es-ES')}
             </h1>
-            <p style={{ color: 'var(--success)', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <p className="fade-in" style={{ color: 'var(--success)', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 Seguidores
                 {todayChange !== 0 && (
                     <span style={{
@@ -135,7 +135,7 @@ export default function FollowerCounter({
                 )}
             </p>
             {timeAgo && (
-                <p style={{
+                <p className="fade-in" style={{
                     fontSize: '0.8rem',
                     color: 'var(--text-muted)',
                     marginTop: '0.5rem'

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface DailyStats {
     date: string;
@@ -8,17 +8,43 @@ interface DailyStats {
     change: number;
 }
 
-export default function Calculators({ currentFollowers, history }: { currentFollowers: number, history: DailyStats[] }) {
+function AnimatedCost({ value }: { value: number }) {
+    const [display, setDisplay] = useState(value);
+    const prevRef = useRef(value);
+
+    useEffect(() => {
+        const from = prevRef.current;
+        const to = value;
+        if (from === to) return;
+
+        const duration = 400;
+        const startTime = performance.now();
+
+        const animate = (now: number) => {
+            const elapsed = now - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            setDisplay(from + (to - from) * eased);
+            if (progress < 1) requestAnimationFrame(animate);
+            else prevRef.current = to;
+        };
+
+        requestAnimationFrame(animate);
+    }, [value]);
+
+    return <>{display.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</>;
+}
+
+export default function Calculators({ currentFollowers, history, loading = false }: { currentFollowers: number, history: DailyStats[], loading?: boolean }) {
     const [cpf, setCpf] = useState<string>('0.12');
 
     // Milestones dinámicos
     const milestones = [10000, 20000, 50000, 100000, 500000, 1000000];
 
-    const calculateCost = (target: number) => {
+    const calculateCost = (target: number): number | null => {
         if (target <= currentFollowers) return null; // Milestone completado
         const needed = target - currentFollowers;
-        const cost = needed * parseFloat(cpf || '0');
-        return cost.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+        return needed * parseFloat(cpf || '0');
     };
 
     const formatMilestone = (num: number) => {
@@ -27,10 +53,31 @@ export default function Calculators({ currentFollowers, history }: { currentFoll
         return num.toLocaleString('es-ES');
     };
 
+    if (loading) {
+        const shimmerStyle = {
+            background: 'linear-gradient(90deg, var(--card-bg) 25%, var(--card-border) 50%, var(--card-bg) 75%)',
+            backgroundSize: '200% 100%',
+            animation: 'shimmer 1.5s infinite',
+            borderRadius: '8px'
+        };
+        return (
+            <div className="glass-panel" style={{ padding: '2rem', height: '100%' }}>
+                <div style={{ ...shimmerStyle, width: '250px', height: '28px', marginBottom: '1rem' }} />
+                <div style={{ ...shimmerStyle, width: '180px', height: '16px', marginBottom: '0.5rem' }} />
+                <div style={{ ...shimmerStyle, width: '100%', height: '44px', marginBottom: '1.5rem' }} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                    {Array.from({ length: 6 }).map((_, i) => (
+                        <div key={i} style={{ ...shimmerStyle, height: '46px' }} />
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+        <div style={{ height: '100%' }}>
             {/* CPF Projection */}
-            <div className="glass-panel" style={{ padding: '2rem' }}>
+            <div className="glass-panel" style={{ padding: '2rem', height: '100%' }}>
                 <h3 style={{ marginBottom: '1rem' }}>¿Cuantos $ para llegar a...?</h3>
                 <div style={{ marginBottom: '1.5rem' }}>
                     <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
@@ -89,7 +136,7 @@ export default function Calculators({ currentFollowers, history }: { currentFoll
                                     fontWeight: 'bold',
                                     fontSize: isCompleted ? '0.9rem' : '1.1rem'
                                 }}>
-                                    {isCompleted ? '¡Completado!' : cost}
+                                    {isCompleted ? '¡Completado!' : <AnimatedCost value={cost!} />}
                                 </span>
                             </div>
                         );

@@ -1,16 +1,16 @@
 :root {
-  /* Light Mode */
-  --background: #ffffff;
-  --foreground: #171717;
-  --card-bg: rgba(255, 255, 255, 0.7);
-  --card-border: rgba(0, 0, 0, 0.1);
-  --primary: #0070f3;
-  --accent: #7928ca;
-  --success: #10b981;
-  --danger: #ef4444;
-  --text-muted: #666666;
-  --glass-border: 1px solid rgba(255, 255, 255, 0.3);
-  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+  /* Light Mode — soft dark, easy on the eyes */
+  --background: #1e1e2e;
+  --foreground: #cdd6f4;
+  --card-bg: rgba(30, 30, 50, 0.6);
+  --card-border: rgba(255, 255, 255, 0.08);
+  --primary: #89b4fa;
+  --accent: #cba6f7;
+  --success: #a6e3a1;
+  --danger: #f38ba8;
+  --text-muted: #7f849c;
+  --glass-border: 1px solid rgba(255, 255, 255, 0.06);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
 }
 
 [data-theme='dark'] {
@@ -106,6 +106,57 @@ input[type=number] {
 
   100% {
     background-position: -200% 0;
+  }
+}
+
+/* Fixed height for follower counter to prevent layout shift */
+.follower-counter-box {
+  height: 240px;
+}
+
+/* Dropdown animation */
+@keyframes dropdownIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Fade in for content after skeleton */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fade-in {
+  animation: fadeIn 0.4s ease-out;
+}
+
+/* Slide up animation for staggered entries */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Calendar day pop-in animation */
+@keyframes calendarDayIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 

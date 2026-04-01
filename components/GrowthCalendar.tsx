@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 
 interface DailyStats {
     date: string;
@@ -8,8 +8,21 @@ interface DailyStats {
     change: number;
 }
 
-export default function GrowthCalendar({ history = [] }: { history: DailyStats[] }) {
+export default function GrowthCalendar({ history = [], loading = false }: { history: DailyStats[], loading?: boolean }) {
     const [selectedPeriod, setSelectedPeriod] = useState<string>('last30');
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Close dropdown on outside click
+    useEffect(() => {
+        const handleClick = (e: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+                setDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, []);
 
     // Get available months from history
     const availableMonths = useMemo(() => {
@@ -39,20 +52,53 @@ export default function GrowthCalendar({ history = [] }: { history: DailyStats[]
     // Calculate total for period
     const periodTotal = filteredHistory.reduce((sum, day) => sum + day.change, 0);
 
+    // Format month label: current year = just month name, other years = "Mes (year)"
+    const currentYear = new Date().getFullYear();
+
+    const formatMonthLabel = (monthKey: string) => {
+        const [year, monthNum] = monthKey.split('-');
+        const date = new Date(parseInt(year), parseInt(monthNum) - 1);
+        const monthName = date.toLocaleDateString('es-ES', { month: 'long' });
+        const capitalized = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+        return parseInt(year) !== currentYear ? `${capitalized} (${year})` : capitalized;
+    };
+
     // Get period label
     const getPeriodLabel = () => {
         if (selectedPeriod === 'last30') {
-            return 'Últimos 30 días';
-        } else {
-            const [year, month] = selectedPeriod.split('-');
-            const date = new Date(parseInt(year), parseInt(month) - 1);
-            return date.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+            return '30 días';
         }
+        return formatMonthLabel(selectedPeriod);
     };
+
+    if (loading) {
+        const shimmerStyle = {
+            background: 'linear-gradient(90deg, var(--card-bg) 25%, var(--card-border) 50%, var(--card-bg) 75%)',
+            backgroundSize: '200% 100%',
+            animation: 'shimmer 1.5s infinite',
+            borderRadius: '8px'
+        };
+        return (
+            <div className="glass-panel" style={{ padding: '2rem', height: '100%' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+                    <div style={{ ...shimmerStyle, width: '150px', height: '28px' }} />
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <div style={{ ...shimmerStyle, width: '140px', height: '32px' }} />
+                        <div style={{ ...shimmerStyle, width: '50px', height: '32px', borderRadius: '20px' }} />
+                    </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '0.8rem' }}>
+                    {Array.from({ length: 30 }).map((_, i) => (
+                        <div key={i} style={{ ...shimmerStyle, height: '52px' }} />
+                    ))}
+                </div>
+            </div>
+        );
+    }
 
     if (history.length === 0) {
         return (
-            <div className="glass-panel" style={{ padding: '2rem' }}>
+            <div className="glass-panel" style={{ padding: '2rem', height: '100%' }}>
                 <h3 style={{ marginBottom: '1.5rem', fontSize: '1.5rem' }}>Crecimiento</h3>
                 <p style={{ opacity: 0.6 }}>No hay datos históricos disponibles aún.</p>
             </div>
@@ -60,7 +106,7 @@ export default function GrowthCalendar({ history = [] }: { history: DailyStats[]
     }
 
     return (
-        <div className="glass-panel" style={{ padding: '2rem' }}>
+        <div className="glass-panel" style={{ padding: '2rem', height: '100%' }}>
             <div style={{
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -71,32 +117,86 @@ export default function GrowthCalendar({ history = [] }: { history: DailyStats[]
             }}>
                 <h3 style={{ fontSize: '1.5rem' }}>Crecimiento</h3>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <select
-                        value={selectedPeriod}
-                        onChange={(e) => setSelectedPeriod(e.target.value)}
-                        style={{
-                            padding: '0.4rem 0.8rem',
-                            borderRadius: '8px',
-                            background: 'var(--card-bg)',
-                            border: '1px solid var(--card-border)',
-                            color: 'var(--text-primary)',
-                            fontSize: '0.9rem',
-                            cursor: 'pointer',
-                            outline: 'none'
-                        }}
-                    >
-                        <option value="last30">Últimos 30 días</option>
-                        {availableMonths.map(month => {
-                            const [year, monthNum] = month.split('-');
-                            const date = new Date(parseInt(year), parseInt(monthNum) - 1);
-                            const label = date.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
-                            return (
-                                <option key={month} value={month}>
-                                    {label.charAt(0).toUpperCase() + label.slice(1)}
-                                </option>
-                            );
-                        })}
-                    </select>
+                    <div ref={dropdownRef} style={{ position: 'relative' }}>
+                        <button
+                            onClick={() => setDropdownOpen(!dropdownOpen)}
+                            style={{
+                                padding: '0.4rem 2rem 0.4rem 0.8rem',
+                                borderRadius: '8px',
+                                background: 'var(--card-bg)',
+                                border: '1px solid var(--card-border)',
+                                color: 'var(--foreground)',
+                                fontSize: '0.9rem',
+                                cursor: 'pointer',
+                                outline: 'none',
+                                position: 'relative',
+                                whiteSpace: 'nowrap',
+                                transition: 'border-color 0.2s ease'
+                            }}
+                        >
+                            {getPeriodLabel()}
+                            <span style={{
+                                position: 'absolute',
+                                right: '0.6rem',
+                                top: '50%',
+                                transform: `translateY(-50%) rotate(${dropdownOpen ? '180deg' : '0deg'})`,
+                                transition: 'transform 0.2s ease',
+                                fontSize: '0.7rem',
+                                opacity: 0.6
+                            }}>▼</span>
+                        </button>
+                        {dropdownOpen && (
+                            <div style={{
+                                position: 'absolute',
+                                top: 'calc(100% + 4px)',
+                                right: 0,
+                                minWidth: '100%',
+                                background: 'var(--background)',
+                                border: '1px solid var(--card-border)',
+                                borderRadius: '10px',
+                                boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+                                zIndex: 50,
+                                overflow: 'hidden',
+                                animation: 'dropdownIn 0.15s ease-out'
+                            }}>
+                                {[
+                                    { value: 'last30', label: '30 días' },
+                                    ...availableMonths.map(month => ({
+                                        value: month,
+                                        label: formatMonthLabel(month)
+                                    }))
+                                ].map((option) => (
+                                    <button
+                                        key={option.value}
+                                        onClick={() => { setSelectedPeriod(option.value); setDropdownOpen(false); }}
+                                        style={{
+                                            display: 'block',
+                                            width: '100%',
+                                            padding: '0.6rem 1rem',
+                                            border: 'none',
+                                            background: selectedPeriod === option.value ? 'rgba(50, 145, 255, 0.15)' : 'transparent',
+                                            color: selectedPeriod === option.value ? 'var(--primary)' : 'var(--foreground)',
+                                            fontSize: '0.85rem',
+                                            cursor: 'pointer',
+                                            textAlign: 'left',
+                                            whiteSpace: 'nowrap',
+                                            transition: 'background 0.15s ease'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            if (selectedPeriod !== option.value)
+                                                e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.background = selectedPeriod === option.value
+                                                ? 'rgba(50, 145, 255, 0.15)' : 'transparent';
+                                        }}
+                                    >
+                                        {option.label}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                     <span style={{
                         padding: '0.4rem 0.8rem',
                         borderRadius: '20px',
@@ -117,7 +217,7 @@ export default function GrowthCalendar({ history = [] }: { history: DailyStats[]
             }}>
                 {filteredHistory.map((day, index) => (
                     <div
-                        key={index}
+                        key={`${selectedPeriod}-${index}`}
                         className="calendar-day"
                         style={{
                             display: 'flex',
@@ -130,7 +230,8 @@ export default function GrowthCalendar({ history = [] }: { history: DailyStats[]
                             border: `1px solid ${day.change >= 0 ? 'var(--success)' : 'var(--danger)'}`,
                             color: day.change >= 0 ? 'var(--success)' : 'var(--danger)',
                             cursor: 'default',
-                            transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+                            transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                            animation: `calendarDayIn 0.3s ease-out ${index * 15}ms both`
                         }}
                     >
                         <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>

@@ -50,25 +50,55 @@ export default function ChangelogPage() {
                         style={{ borderRadius: '8px' }}
                         className="logo-hover"
                     />
-                    <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>TrawiStats 1.2</h1>
+                    <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>TrawiStats 1.3.1</h1>
                 </Link>
                 <ThemeToggle />
             </header>
 
-            <section className="glass-panel" style={{ padding: '2rem', marginBottom: '2rem' }}>
+            <section className="glass-panel" style={{ padding: '2rem', marginBottom: '2rem', animation: 'slideUp 0.4s ease-out' }}>
                 <h2 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📋 Changelog</h2>
                 <p style={{ color: 'var(--text-muted)' }}>Historial de cambios y mejoras del sistema</p>
             </section>
 
             {loading ? (
-                <div className="glass-panel" style={{ padding: '2rem', textAlign: 'center' }}>
-                    Cargando...
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                    {[1, 2, 3].map(i => {
+                        const shimmerStyle = {
+                            background: 'linear-gradient(90deg, var(--card-bg) 25%, var(--card-border) 50%, var(--card-bg) 75%)',
+                            backgroundSize: '200% 100%',
+                            animation: 'shimmer 1.5s infinite',
+                            borderRadius: '8px'
+                        };
+                        return (
+                            <div key={i} className="glass-panel" style={{ padding: '2rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                                    <div style={{ ...shimmerStyle, width: '300px', height: '28px' }} />
+                                    <div style={{ ...shimmerStyle, width: '120px', height: '28px', borderRadius: '20px' }} />
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                                    {Array.from({ length: 4 }).map((_, j) => (
+                                        <div key={j} style={{ display: 'flex', gap: '0.8rem' }}>
+                                            <div style={{ ...shimmerStyle, width: '70px', height: '24px', borderRadius: '4px' }} />
+                                            <div style={{ ...shimmerStyle, flex: 1, height: '24px' }} />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    })}
                 </div>
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                    {changelog.map((release) => (
-                        <article key={release.version} className="glass-panel" style={{ padding: '2rem' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                    {changelog.map((release, releaseIdx) => (
+                        <article
+                            key={release.version}
+                            className="glass-panel"
+                            style={{
+                                padding: '2rem',
+                                animation: `slideUp 0.4s ease-out ${releaseIdx * 100}ms both`
+                            }}
+                        >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                                 <h3 style={{ fontSize: '1.5rem' }}>
                                     <span className="text-gradient">v{release.version}</span>
                                     <span style={{ marginLeft: '0.5rem', fontWeight: 'normal', opacity: 0.8 }}>
@@ -82,7 +112,7 @@ export default function ChangelogPage() {
                                     background: 'var(--card-bg)',
                                     borderRadius: '20px'
                                 }}>
-                                    {new Date(release.date).toLocaleDateString('es-ES', {
+                                    {new Date(release.date + 'T12:00:00').toLocaleDateString('es-ES', {
                                         year: 'numeric',
                                         month: 'long',
                                         day: 'numeric'
@@ -94,7 +124,15 @@ export default function ChangelogPage() {
                                 {release.changes.map((change, idx) => {
                                     const style = typeStyles[change.type];
                                     return (
-                                        <li key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                                        <li
+                                            key={idx}
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '0.8rem',
+                                                animation: `slideUp 0.3s ease-out ${releaseIdx * 100 + idx * 40}ms both`
+                                            }}
+                                        >
                                             <span style={{
                                                 fontSize: '0.75rem',
                                                 padding: '0.2rem 0.5rem',

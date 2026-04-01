@@ -96,8 +96,8 @@
 
 ```bash
 # 1. Clonar el repositorio
-git clone https://github.com/josuebustosn/statsdetrawi.git
-cd statsdetrawi
+git clone https://github.com/josuebustosn/trawi-stats.git
+cd trawi-stats
 
 # 2. Instalar dependencias de Node.js
 npm install
@@ -413,7 +413,7 @@ Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) par
 
 - **Website:** [stats.trawi.net](https://stats.trawi.net)
 - **Instagram:** [@trawi.viajes](https://instagram.com/trawi.viajes)
-- **Repository:** [github.com/josuebustosn/statsdetrawi](https://github.com/josuebustosn/statsdetrawi)
+- **Repository:** [github.com/josuebustosn/trawi-stats](https://github.com/josuebustosn/trawi-stats)
 
 ---
 

@@ -1,0 +1,222 @@
+[
+    {
+        "version": "1.3",
+        "date": "2026-02-01",
+        "title": "Milestones Dinámicos y Proyección Inteligente",
+        "changes": [
+            {
+                "type": "feature",
+                "description": "📅 Selector de meses en calendario: explora tu historial completo mes por mes"
+            },
+            {
+                "type": "feature",
+                "description": "Visualización flexible: 'Últimos 30 días' o selecciona cualquier mes anterior"
+            },
+            {
+                "type": "feature",
+                "description": "Total dinámico: indicador de crecimiento se ajusta al período seleccionado"
+            },
+            {
+                "type": "feature",
+                "description": "🎯 Sistema de milestones expandido: 10k, 20k, 50k, 100k, 500k, 1M"
+            },
+            {
+                "type": "feature",
+                "description": "Milestones inteligentes: se marcan automáticamente como completados con ✓"
+            },
+            {
+                "type": "feature",
+                "description": "Formato legible: 10k, 100k, 1M en lugar de números largos"
+            },
+            {
+                "type": "feature",
+                "description": "🧠 Proyección inteligente: algoritmo EMA (Exponential Moving Average) con análisis de tendencias"
+            },
+            {
+                "type": "feature",
+                "description": "Predicción adaptativa: detecta aceleración/desaceleración del crecimiento"
+            },
+            {
+                "type": "feature",
+                "description": "Gráfico dinámico: se ajusta automáticamente al siguiente milestone"
+            },
+            {
+                "type": "feature",
+                "description": "Historial de logros: milestones completados con fechas en badges verdes"
+            },
+            {
+                "type": "feature",
+                "description": "Referencias visuales: líneas de milestone adaptativas (verdes si completado, destacadas si pendiente)"
+            },
+            {
+                "type": "fix",
+                "description": "🔧 Fix crítico: indicador 'Actualizado hace...' ahora muestra tiempo real"
+            },
+            {
+                "type": "fix",
+                "description": "Timestamp preciso: actualización cada 10 segundos (antes 60s)"
+            },
+            {
+                "type": "fix",
+                "description": "Claridad en ShareMetrics: 'Mes' → '30d' para indicar últimos 30 días"
+            },
+            {
+                "type": "feature",
+                "description": "✨ UI simplificada: eliminado input de cantidad deseada en calculadora"
+            },
+            {
+                "type": "feature",
+                "description": "Enfoque en milestones: calculadora centrada en objetivos clave"
+            },
+            {
+                "type": "feature",
+                "description": "🗑️ Removida herramienta deprecated: Calculadora de CPF Diario"
+            }
+        ]
+    },
+    {
+        "version": "1.2",
+        "date": "2025-12-07",
+        "title": "Easter Egg Musical y Compartir Logros",
+        "changes": [
+            {
+                "type": "feature",
+                "description": "🎵 Easter egg musical con canciones de Rawi rotando diariamente"
+            },
+            {
+                "type": "feature",
+                "description": "Visualizador de audio en tiempo real cuando la música está activa"
+            },
+            {
+                "type": "feature",
+                "description": "7 canciones trawitizadas: Triwikini, #Tráwico, La Noche Que No Había Trawi, y más"
+            },
+            {
+                "type": "feature",
+                "description": "📤 Botón para compartir logros: genera imágenes de métricas (día/semana/mes)"
+            },
+            {
+                "type": "feature",
+                "description": "Copiar imagen al portapapeles o descargar como PNG"
+            },
+            {
+                "type": "feature",
+                "description": "🎯 Barra de progreso hacia 10K seguidores integrada en proyección"
+            },
+            {
+                "type": "feature",
+                "description": "Muestra seguidores faltantes y fecha estimada para alcanzar meta"
+            }
+        ]
+    },
+    {
+        "version": "1.1",
+        "date": "2025-12-07",
+        "title": "Mejoras de Estabilidad y UI",
+        "changes": [
+            {
+                "type": "fix",
+                "description": "Configurado cron jobs para actualizaciones automáticas cada 2 horas"
+            },
+            {
+                "type": "fix",
+                "description": "Agregado sync automático a las 23:50 Venezuela para cierre diario"
+            },
+            {
+                "type": "fix",
+                "description": "PM2 configurado con límite de memoria de 150MB para servidor de 512MB RAM"
+            },
+            {
+                "type": "fix",
+                "description": "Rotación de logs con pm2-logrotate para evitar llenar disco"
+            },
+            {
+                "type": "fix",
+                "description": "Detección automática de python/python3 según sistema operativo"
+            },
+            {
+                "type": "feature",
+                "description": "Contador de seguidores con animación tipo odómetro"
+            },
+            {
+                "type": "feature",
+                "description": "Badge '+X hoy' mostrando cambio del día actual"
+            },
+            {
+                "type": "feature",
+                "description": "Indicador 'Actualizado hace X minutos'"
+            },
+            {
+                "type": "feature",
+                "description": "Skeleton loader mientras carga datos"
+            },
+            {
+                "type": "feature",
+                "description": "Badge '+X este mes' en calendario de crecimiento"
+            },
+            {
+                "type": "feature",
+                "description": "Hover effects en tarjetas del calendario y paneles"
+            },
+            {
+                "type": "feature",
+                "description": "Logo clickeable que abre Instagram"
+            },
+            {
+                "type": "feature",
+                "description": "Sistema de changelog con página dedicada"
+            }
+        ]
+    },
+    {
+        "version": "1.0",
+        "date": "2025-11-29",
+        "title": "Lanzamiento Inicial",
+        "changes": [
+            {
+                "type": "feature",
+                "description": "Dashboard de monitoreo de seguidores de Instagram"
+            },
+            {
+                "type": "feature",
+                "description": "Integración con Apify para obtener datos de seguidores"
+            },
+            {
+                "type": "feature",
+                "description": "Calendario de crecimiento de últimos 30 días"
+            },
+            {
+                "type": "feature",
+                "description": "Calculadora de costo por seguidor (CPF)"
+            },
+            {
+                "type": "feature",
+                "description": "Calculadora inversa: CPF desde gasto diario"
+            },
+            {
+                "type": "feature",
+                "description": "Gráfico de proyección de crecimiento"
+            },
+            {
+                "type": "feature",
+                "description": "Sistema de caché de 2 horas para optimizar consumo de API"
+            },
+            {
+                "type": "feature",
+                "description": "Modo claro/oscuro"
+            },
+            {
+                "type": "deploy",
+                "description": "Deploy en DigitalOcean con PM2 y Nginx"
+            },
+            {
+                "type": "deploy",
+                "description": "SSL/HTTPS configurado con Let's Encrypt"
+            },
+            {
+                "type": "deploy",
+                "description": "Dominio configurado: stats.trawi.net"
+            }
+        ]
+    }
+]

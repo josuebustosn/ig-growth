@@ -38,13 +38,7 @@ apt install -y nodejs
 node -v  # Verificar (debe mostrar v18.x.x)
 ```
 
-### 3.3 Instalar Python 3 y pip
-```bash
-apt install -y python3 python3-pip
-python3 --version  # Verificar
-```
-
-### 3.4 Instalar Git
+### 3.3 Instalar Git
 ```bash
 apt install -y git
 ```
@@ -65,28 +59,28 @@ cd trawistats
 
 ## Paso 5: Configurar el Proyecto
 
-### 5.1 Instalar dependencias de Node
+### 5.1 Instalar dependencias
 ```bash
 npm install
 ```
 
-### 5.2 Instalar dependencias de Python
-```bash
-pip3 install apify-client
-```
-
-### 5.3 Crear archivo de variables de entorno
+### 5.2 Crear archivo de variables de entorno
 ```bash
 nano .env.local
 ```
 
-Pega esto (reemplaza con tu token real):
-```
+Pega esto (reemplaza con tus valores reales):
+```env
+APIFY_TOKEN=tu_token_de_apify_aqui
+NEXT_PUBLIC_INSTAGRAM_USERNAME=tu_usuario_de_instagram
+
+# Opcional: segundos a esperar a que termine el run de Apify (default: 50).
+APIFY_WAIT_SECS=50
 ```
 
 Guarda con `Ctrl+O`, `Enter`, `Ctrl+X`
 
-### 5.4 Build del proyecto
+### 5.3 Build del proyecto
 ```bash
 npm run build
 ```
@@ -325,7 +319,7 @@ crontab -l
 
 1. **Cron cada 2 horas**: Hace un request al API, forzando actualización si el caché de 2 horas expiró
 2. **Cron 23:51 Venezuela**: Dispara el "End of Day sync" - la lógica en `instagram-service.ts` detecta que está en la ventana 23:50-23:59 y fuerza actualización
-3. **El código interno** (líneas 56-63 de `lib/instagram-service.ts`) marca `lastEndOfDaySync` para no repetir el sync ese día
+3. **El código interno** (la ventana de fin de día dentro de `fetchProfile`, en `lib/instagram-service.ts`) marca `lastEndOfDaySync` para no repetir el sync ese día
 
 ### Verificar que funciona
 ```bash

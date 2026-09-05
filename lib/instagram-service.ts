@@ -1,10 +1,40 @@
-import { exec } from 'child_process';
+import { ApifyClient } from 'apify-client';
 import path from 'path';
-import { promisify } from 'util';
 import { getCachedProfile, saveCachedProfile } from './storage';
 import fs from 'fs';
 
-const execAsync = promisify(exec);
+// Apify Actor: instagram-scraper
+const APIFY_ACTOR_ID = '7RQ4RlfRihUhflQtJ';
+
+// How long to wait for the Apify run before giving up. Serverless platforms cap
+// how long a function may run, and that cap varies per plan, so this is read from
+// APIFY_WAIT_SECS and each deployment tunes it to fit its own limit.
+const DEFAULT_APIFY_WAIT_SECS = 50;
+
+// Shape of the fields we read off the Actor's dataset items.
+type ApifyProfileItem = {
+    followersCount?: unknown;
+    followers?: unknown;
+};
+
+// Renders a rejected value for the error message. JSON.stringify() alone is not
+// enough: it prints NaN and Infinity as `null`, which hides what actually arrived.
+function describeValue(value: unknown): string {
+    if (typeof value === 'number') {
+        return `number ${value}`;
+    }
+    if (typeof value === 'string') {
+        return `string ${JSON.stringify(value)}`;
+    }
+    if (value === null) {
+        return 'null';
+    }
+    try {
+        return `${typeof value} ${JSON.stringify(value)}`;
+    } catch {
+        return typeof value;
+    }
+}
 
 export interface InstagramProfile {
     username: string;
@@ -13,6 +43,89 @@ export interface InstagramProfile {
     following: number;
     profilePicUrl: string;
     biography: string;
+}
+
+function getApifyWaitSecs(): number {
+    const raw = process.env.APIFY_WAIT_SECS;
+    if (!raw) {
+        return DEFAULT_APIFY_WAIT_SECS;
+    }
+
+    const parsed = parseInt(raw, 10);
+    if (isNaN(parsed) || parsed <= 0) {
+        console.warn(`Invalid APIFY_WAIT_SECS: "${raw}". Falling back to ${DEFAULT_APIFY_WAIT_SECS}s.`);
+        return DEFAULT_APIFY_WAIT_SECS;
+    }
+
+    return parsed;
+}
+
+async function fetchFollowersFromApify(username: string): Promise<number> {
+    const token = process.env.APIFY_TOKEN;
+    if (!token) {
+        throw new Error('APIFY_TOKEN environment variable not set.');
+    }
+
+    const client = new ApifyClient({ token });
+
+    // log: null matters as much as waitSecs. Left undefined, apify-client opens a
+    // live log stream for the run and .call() resolves through
+    // `.finally(async () => streamedLog.stop())`, which only unblocks when the next
+    // log chunk arrives — so a still-running, momentarily silent Actor keeps the
+    // call pending well past waitSecs. That would let the host kill the function
+    // before the catch below can fall back to cache. null opts out of the stream.
+    const run = await client.actor(APIFY_ACTOR_ID).call(
+        { usernames: [username] },
+        { waitSecs: getApifyWaitSecs(), log: null }
+    );
+
+    // A run that failed, was aborted or timed out still resolves here — it just
+    // leaves an empty dataset behind — so the status has to be checked explicitly.
+    if (run.status !== 'SUCCEEDED') {
+        throw new Error(`Apify run ${run.id} did not succeed for ${username}. Status: ${run.status}`);
+    }
+
+    const { items } = await client.dataset<ApifyProfileItem>(run.defaultDatasetId).listItems();
+
+    if (items.length === 0) {
+        throw new Error(`No data returned for user ${username}`);
+    }
+
+    const userData = items[0];
+    // Fallback to 'followers' in case the Actor changes its output shape.
+    const rawFollowers = userData.followersCount ?? userData.followers;
+
+    if (rawFollowers === undefined || rawFollowers === null) {
+        throw new Error(`Could not find followers count in response. Keys: ${Object.keys(userData).join(', ')}`);
+    }
+
+    // Allow-list, not a permissive cast. Number() turns "", " ", false and []
+    // into 0, and Number.isFinite(0) is true, so every one of those would pass
+    // as a valid count of zero. The history is cumulative: a false 0 is written
+    // permanently and then poisons the next day's change and the EMA projection.
+    // Failing loudly is recoverable; a wrong number on record is not.
+    if (typeof rawFollowers !== 'number' && typeof rawFollowers !== 'string') {
+        throw new Error(
+            `Invalid followers count for ${username}: expected number or string, got ${describeValue(rawFollowers)}`
+        );
+    }
+
+    // A blank string is the one string Number() would still silently read as 0.
+    if (typeof rawFollowers === 'string' && rawFollowers.trim() === '') {
+        throw new Error(
+            `Invalid followers count for ${username}: got an empty or blank string ${JSON.stringify(rawFollowers)}`
+        );
+    }
+
+    const followers = Number(rawFollowers);
+
+    if (!Number.isInteger(followers) || followers < 0) {
+        throw new Error(
+            `Invalid followers count for ${username}: expected a non-negative integer, got ${describeValue(rawFollowers)}`
+        );
+    }
+
+    return followers;
 }
 
 const activeRequests = new Map<string, Promise<InstagramProfile | null>>();
@@ -75,28 +188,15 @@ async function fetchProfile(username: string): Promise<InstagramProfile | null> 
             };
         }
 
-        // 2. Run Python Script
-        // SECURITY: Validate username to prevent Command Injection
+        // 2. Fetch from Apify
+        // Reject malformed usernames before spending an Actor run on them.
         const usernameRegex = /^[a-zA-Z0-9._]+$/;
         if (!usernameRegex.test(username)) {
             throw new Error(`Invalid username format: ${username}`);
         }
 
         console.log(`Fetching fresh data for ${username} via Apify...`);
-        const scriptPath = path.join(process.cwd(), 'scripts', 'get_followers.py');
-        // Use 'python' on Windows, 'python3' on Linux/Mac
-        const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
-        const { stdout, stderr } = await execAsync(`${pythonCmd} "${scriptPath}" "${username}"`, { env: process.env });
-
-        if (stderr) {
-            console.error('Script stderr:', stderr);
-        }
-
-        const followers = parseInt(stdout.trim(), 10);
-
-        if (isNaN(followers)) {
-            throw new Error(`Invalid output from Python script. Stdout: "${stdout.trim()}" Stderr: "${stderr.trim()}"`);
-        }
+        const followers = await fetchFollowersFromApify(username);
 
         // 3. Update Cache
         saveCachedProfile(username, followers, isEndOfDaySync);

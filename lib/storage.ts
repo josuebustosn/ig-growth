@@ -1,124 +1,47 @@
-import fs from 'fs';
-import path from 'path';
+import * as disk from './storage-disk';
+import type { DailyStats } from './storage-disk';
 
-const DATA_DIR = path.join(process.cwd(), 'data');
-const HISTORY_FILE = path.join(DATA_DIR, 'history.json');
-const CACHE_FILE = path.join(DATA_DIR, 'cache.json');
+export type { DailyStats };
 
-export interface DailyStats {
-    date: string; // YYYY-MM-DD
-    followers: number;
-    change: number;
+// Two backends, picked by whether a blob token is present. Without one the disk
+// backend runs exactly as it always has — storage-disk.ts is the previous
+// storage.ts, moved without a line changed. With one, nothing touches the
+// filesystem, which is what makes the app deployable on a serverless platform.
+//
+// Checked per call rather than once at module load, so the decision does not depend
+// on the order in which the environment happens to be populated.
+function useBlob(): boolean {
+    return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 }
 
-interface HistoryData {
-    [username: string]: DailyStats[];
-}
+// Loaded on demand so that a deployment running on disk never pulls @vercel/blob
+// into the process at all. Every function here is already async, so the dynamic
+// import costs nothing beyond the first call.
+let blobModule: typeof import('./storage-blob') | null = null;
 
-interface CacheData {
-    [username: string]: {
-        followers: number;
-        lastUpdated: number;
-        expiresAt: number;
-        lastEndOfDaySync?: string; // YYYY-MM-DD
+async function blob(): Promise<typeof import('./storage-blob')> {
+    if (!blobModule) {
+        blobModule = await import('./storage-blob');
     }
+    return blobModule;
 }
 
-function ensureDataDir() {
-    if (!fs.existsSync(DATA_DIR)) {
-        fs.mkdirSync(DATA_DIR, { recursive: true });
+export async function getHistory(username: string): Promise<DailyStats[]> {
+    return useBlob() ? (await blob()).getHistory(username) : disk.getHistory(username);
+}
+
+export async function saveDailyStats(username: string, followers: number): Promise<DailyStats[]> {
+    return useBlob() ? (await blob()).saveDailyStats(username, followers) : disk.saveDailyStats(username, followers);
+}
+
+export async function getCachedProfile(username: string): Promise<{ followers: number, lastUpdated: number, expiresAt: number, lastEndOfDaySync?: string } | null> {
+    return useBlob() ? (await blob()).getCachedProfile(username) : disk.getCachedProfile(username);
+}
+
+export async function saveCachedProfile(username: string, followers: number, isEndOfDaySync: boolean = false, ttl: number = 2 * 60 * 60 * 1000): Promise<void> {
+    if (useBlob()) {
+        await (await blob()).saveCachedProfile(username, followers, isEndOfDaySync, ttl);
+        return;
     }
-}
-
-function readHistory(): HistoryData {
-    ensureDataDir();
-    if (!fs.existsSync(HISTORY_FILE)) {
-        return {};
-    }
-    try {
-        const data = fs.readFileSync(HISTORY_FILE, 'utf-8');
-        return JSON.parse(data);
-    } catch (error) {
-        console.error('Error reading history file:', error);
-        return {};
-    }
-}
-
-function writeHistory(data: HistoryData) {
-    ensureDataDir();
-    fs.writeFileSync(HISTORY_FILE, JSON.stringify(data, null, 2), 'utf-8');
-}
-
-export function getHistory(username: string): DailyStats[] {
-    const data = readHistory();
-    return data[username] || [];
-}
-
-export function saveDailyStats(username: string, followers: number): DailyStats[] {
-    const data = readHistory();
-    const history = data[username] || [];
-    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
-
-    const existingEntryIndex = history.findIndex(h => h.date === today);
-
-    if (existingEntryIndex >= 0) {
-        // Update today's entry
-        history[existingEntryIndex].followers = followers;
-
-        if (existingEntryIndex > 0) {
-            history[existingEntryIndex].change = followers - history[existingEntryIndex - 1].followers;
-        } else {
-            history[existingEntryIndex].change = 0;
-        }
-
-    } else {
-        // New entry for today
-        const lastEntry = history[history.length - 1];
-        const change = lastEntry ? followers - lastEntry.followers : 0;
-
-        history.push({
-            date: today,
-            followers,
-            change
-        });
-    }
-
-    data[username] = history;
-    writeHistory(data);
-    return history;
-}
-
-// Cache Logic
-
-function getCacheData(): CacheData {
-    if (!fs.existsSync(CACHE_FILE)) {
-        return {};
-    }
-    try {
-        const fileContent = fs.readFileSync(CACHE_FILE, 'utf-8');
-        return JSON.parse(fileContent);
-    } catch (error) {
-        return {};
-    }
-}
-
-export function getCachedProfile(username: string): { followers: number, lastUpdated: number, expiresAt: number, lastEndOfDaySync?: string } | null {
-    const cache = getCacheData();
-    return cache[username] || null;
-}
-
-export function saveCachedProfile(username: string, followers: number, isEndOfDaySync: boolean = false, ttl: number = 2 * 60 * 60 * 1000) {
-    const cache = getCacheData();
-
-    const expiresAt = Date.now() + ttl;
-
-    const existingData = cache[username] || {};
-
-    cache[username] = {
-        followers,
-        lastUpdated: Date.now(),
-        expiresAt,
-        lastEndOfDaySync: isEndOfDaySync ? new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' }) : existingData.lastEndOfDaySync
-    };
-    fs.writeFileSync(CACHE_FILE, JSON.stringify(cache, null, 2));
+    disk.saveCachedProfile(username, followers, isEndOfDaySync, ttl);
 }

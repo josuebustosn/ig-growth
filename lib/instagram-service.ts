@@ -152,7 +152,7 @@ export async function getInstagramProfile(username: string): Promise<InstagramPr
 async function fetchProfile(username: string): Promise<InstagramProfile | null> {
     try {
         // 1. Check Cache & End of Day Logic
-        const cached = getCachedProfile(username);
+        const cached = await getCachedProfile(username);
         let forceUpdate = false;
         let isEndOfDaySync = false;
 
@@ -199,7 +199,7 @@ async function fetchProfile(username: string): Promise<InstagramProfile | null> 
         const followers = await fetchFollowersFromApify(username);
 
         // 3. Update Cache
-        saveCachedProfile(username, followers, isEndOfDaySync);
+        await saveCachedProfile(username, followers, isEndOfDaySync);
 
         return {
             username,
@@ -227,11 +227,11 @@ async function fetchProfile(username: string): Promise<InstagramProfile | null> 
         }
 
         // Fallback to cache if available even if expired, and update timestamp to prevent Loop
-        const cached = getCachedProfile(username);
+        const cached = await getCachedProfile(username);
         if (cached) {
             console.log(`[Error Recovery] Using old cache for ${username} and backing off for 15 mins.`);
             // Update cache with backoff (15 mins) to prevent immediate retry loop
-            saveCachedProfile(username, cached.followers, false, 15 * 60 * 1000);
+            await saveCachedProfile(username, cached.followers, false, 15 * 60 * 1000);
 
             return {
                 username,

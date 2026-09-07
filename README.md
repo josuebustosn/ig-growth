@@ -69,7 +69,6 @@
 - **Next.js API Routes** - Serverless functions
 - **Apify Client** - Web scraping de Instagram
 - **Node.js** - Runtime environment
-- **Python** - Script de scraping
 
 ### Data & Storage
 - **JSON files** - Sistema de caché y historial
@@ -88,7 +87,6 @@
 
 ### Requisitos Previos
 - Node.js 18+ 
-- Python 3.8+
 - npm o yarn
 - Token de Apify API
 
@@ -99,24 +97,21 @@
 git clone https://github.com/josuebustosn/trawi-stats.git
 cd trawi-stats
 
-# 2. Instalar dependencias de Node.js
+# 2. Instalar dependencias
 npm install
 
-# 3. Instalar dependencias de Python
-pip install apify-client
-
-# 4. Crear archivo de configuración
+# 3. Crear archivo de configuración
 cp .env.example .env.local
 
-# 5. Configurar variables de entorno
+# 4. Configurar variables de entorno
 # Editar .env.local con tu token de Apify y usuario de Instagram:
 # APIFY_TOKEN=tu_token_aqui
 # NEXT_PUBLIC_INSTAGRAM_USERNAME=tu_usuario
 
-# 6. Correr en desarrollo
+# 5. Correr en desarrollo
 npm run dev
 
-# 7. Abrir en navegador
+# 6. Abrir en navegador
 # http://localhost:3000
 ```
 
@@ -127,6 +122,10 @@ Crear archivo `.env.local` en la raíz (ver `.env.example`):
 ```env
 APIFY_TOKEN=tu_token_de_apify_aqui
 NEXT_PUBLIC_INSTAGRAM_USERNAME=tu_usuario_de_instagram
+
+# Opcional: segundos a esperar a que termine el run de Apify (default: 50).
+# Ajustalo al limite de duracion de tu plan de hosting.
+APIFY_WAIT_SECS=50
 ```
 
 ---
@@ -155,8 +154,6 @@ trawi-stats/
 ├── lib/
 │   ├── instagram-service.ts      # Servicio de Instagram
 │   └── storage.ts                # Sistema de caché
-├── scripts/
-│   └── get_followers.py          # Script de Apify
 ├── public/
 │   ├── changelog.json            # Historial de versiones
 │   └── ...                       # Assets estáticos
@@ -291,7 +288,7 @@ Editar `app/globals.css`:
 **DigitalOcean / Railway / Linode**
 
 1. Crear servidor Ubuntu 22.04
-2. Instalar Node.js 18+ y Python 3.8+
+2. Instalar Node.js 18+
 3. Clonar repositorio
 4. Configurar `.env.local` con `APIFY_TOKEN`
 5. Instalar dependencias
@@ -305,7 +302,6 @@ Ver [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) para guía completa.
 
 ⚠️ **No recomendado** porque:
 - Archivos JSON no persisten entre deploys
-- No puedes correr scripts de Python
 - Necesitas base de datos externa
 
 ---
@@ -363,7 +359,7 @@ chore: Tareas de mantenimiento
 
 ### Error: "Cannot find module 'apify-client'"
 ```bash
-pip install apify-client
+npm install
 ```
 
 ### Cache no actualiza

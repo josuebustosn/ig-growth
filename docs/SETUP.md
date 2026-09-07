@@ -3,19 +3,13 @@
 ## Requisitos Previos
 
 1.  **Node.js**: v18 o superior.
-2.  **Python**: v3.8 o superior.
-3.  **Cuenta de Apify**: Con saldo o plan gratuito para usar el actor de Instagram.
+2.  **Cuenta de Apify**: Con saldo o plan gratuito para usar el actor de Instagram.
 
 ## Instalación
 
-1.  Instalar dependencias de Node.js:
+1.  Instalar dependencias:
     ```bash
     npm install
-    ```
-
-2.  Instalar dependencias de Python:
-    ```bash
-    pip install apify-client
     ```
 
 ## Configuración
@@ -31,6 +25,9 @@ Edita `.env.local` con tus valores:
 ```env
 APIFY_TOKEN=tu_token_de_apify_aqui
 NEXT_PUBLIC_INSTAGRAM_USERNAME=tu_usuario_de_instagram
+
+# Opcional: segundos a esperar a que termine el run de Apify (default: 50).
+APIFY_WAIT_SECS=50
 ```
 
 ## Ejecución
@@ -47,4 +44,5 @@ La aplicación estará disponible en `http://localhost:3000`.
 
 -   **Intervalo de Actualización**: Configurado en `lib/storage.ts` (variable `baseDuration`). Actualmente 2 horas.
 -   **Usuario Objetivo**: Configurable via variable de entorno `NEXT_PUBLIC_INSTAGRAM_USERNAME` en `.env.local`.
+-   **Espera del Scraping**: `APIFY_WAIT_SECS` define cuántos segundos se espera a que termine el run de Apify (default: 50). En hosting serverless, mantenelo por debajo del límite de duración de tu plan.
 -   **Datos Históricos**: Se guardan en `data/history.json`. Puedes editar este archivo manualmente si necesitas corregir datos.

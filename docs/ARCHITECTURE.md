@@ -8,7 +8,7 @@ El proyecto sigue una arquitectura moderna de Next.js:
 
 - **Frontend**: React Components (`app/`, `components/`)
 - **Backend (API)**: Next.js Route Handlers (`app/api/`)
-- **Data Fetching**: Script de Python (`scripts/`) + Apify
+- **Data Fetching**: Cliente de Apify (`apify-client`)
 - **Persistencia**: Archivos JSON locales (`data/`)
 
 ## Flujo de Datos
@@ -23,14 +23,15 @@ El proyecto sigue una arquitectura moderna de Next.js:
 
 3.  **Servicio (`lib/instagram-service.ts`)**:
     - **Paso 1 (Caché)**: Consulta `lib/storage.ts` para ver si hay datos recientes (menos de 2 horas).
-    - **Paso 2 (Fetch)**: Si los datos son viejos, ejecuta el script de Python: `python scripts/get_followers.py`.
+    - **Paso 2 (Fetch)**: Si los datos son viejos, llama a la API de Apify con `apify-client`.
     - **Paso 3 (Guardado)**: Guarda el nuevo dato en `data/history.json` y actualiza la caché en `data/cache.json`.
 
-4.  **Script Python (`scripts/get_followers.py`)**:
-    - Usa la librería `apify-client`.
-    - Se conecta a la API de Apify usando el token en `.env.local`.
-    - Ejecuta el actor `instagram-scraper` para obtener el perfil de `trawi.viajes`.
-    - Devuelve el número de seguidores a la salida estándar (stdout).
+4.  **Cliente de Apify (`fetchFollowersFromApify` en `lib/instagram-service.ts`)**:
+    - Usa la librería `apify-client` de npm.
+    - Se conecta a la API de Apify usando el token `APIFY_TOKEN`.
+    - Ejecuta el actor `instagram-scraper` para el usuario configurado, esperando como máximo `APIFY_WAIT_SECS` segundos (default: 50).
+    - Verifica que el run haya terminado con estado `SUCCEEDED` antes de leer el dataset.
+    - Devuelve el número de seguidores como `number`.
 
 ## Componentes Clave
 
@@ -45,4 +46,4 @@ El proyecto sigue una arquitectura moderna de Next.js:
 -   **Lenguaje**: TypeScript
 -   **Estilos**: CSS Modules / Global CSS (Diseño Glassmorphism)
 -   **Gráficos**: Recharts
--   **Scraping**: Python + Apify Client
+-   **Scraping**: Apify Client (`apify-client`)

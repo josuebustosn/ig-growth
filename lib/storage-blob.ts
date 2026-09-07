@@ -3,8 +3,14 @@ import type { DailyStats } from './storage-disk';
 
 // Keys in the blob store. These replace the on-disk paths: there is no filesystem
 // here, so nothing derived from process.cwd() would mean anything.
-const HISTORY_KEY = 'trawi-stats/history.json';
-const CACHE_KEY = 'trawi-stats/cache.json';
+//
+// Deliberately unprefixed. A blob store belongs to one project, so each deployment
+// has its own and there is nothing to namespace against. And a store shared between
+// two brands would not be saved by a prefix anyway — history.json is keyed by
+// username, so both would already coexist in one document, which is the situation
+// issue #3 argues against rather than one to design for.
+const HISTORY_KEY = 'history.json';
+const CACHE_KEY = 'cache.json';
 
 // Reads always bypass the CDN. Overwriting a blob takes up to 60s to propagate and
 // get() can serve the previous version in the meantime, which would make every

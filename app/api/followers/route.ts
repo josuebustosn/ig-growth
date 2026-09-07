@@ -17,10 +17,10 @@ export async function GET(request: Request) {
     }
 
     // Save stats and get updated history
-    const history = saveDailyStats(username, profile.followers);
+    const history = await saveDailyStats(username, profile.followers);
 
     // Get real lastUpdated from cache (when Apify actually scraped)
-    const cached = getCachedProfile(username);
+    const cached = await getCachedProfile(username);
 
     return NextResponse.json({
         profile,

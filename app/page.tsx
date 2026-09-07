@@ -6,8 +6,8 @@ import GrowthCalendar from '@/components/GrowthCalendar';
 import Calculators from '@/components/Calculators';
 import ProjectionChart from '@/components/ProjectionChart';
 import ThemeToggle from '@/components/ThemeToggle';
-import MusicPlayer from '@/components/MusicPlayer';
 import ShareMetrics from '@/components/ShareMetrics';
+import { brand } from '@/lib/brand';
 
 import Image from 'next/image';
 
@@ -30,7 +30,7 @@ export default function Home() {
   const [error, setError] = useState('');
   const [lastFetch, setLastFetch] = useState<number | null>(cachedLastFetch);
 
-  const username = process.env.NEXT_PUBLIC_INSTAGRAM_USERNAME || 'trawi.viajes';
+  const username = brand.defaultUsername;
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -88,14 +88,14 @@ export default function Home() {
           style={{ display: 'flex', alignItems: 'center', gap: '1rem', textDecoration: 'none', color: 'inherit' }}
         >
           <Image
-            src="/trawi-logo.jpg"
-            alt="Trawi Logo"
+            src={brand.headerLogo}
+            alt={`${brand.name} Logo`}
             width={50}
             height={50}
-            style={{ borderRadius: '8px', transition: 'transform 0.2s ease' }}
+            style={{ borderRadius: '8px', transition: 'transform 0.2s ease', objectFit: 'contain' }}
             className="logo-hover"
           />
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>TrawiStats 1.3.1</h1>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{brand.name} 1.3.1</h1>
         </a>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <a
@@ -160,8 +160,6 @@ export default function Home() {
         </section>
       </div>
 
-      {/* Music Easter Egg */}
-      <MusicPlayer />
     </main>
   );
 }

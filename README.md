@@ -1,6 +1,6 @@
 # Instagram Growth Dashboard
 
-Un dashboard para una sola cuenta de Instagram: cuántos seguidores tenés hoy, cuántos ganaste, cuánto te falta para la próxima meta y cuándo vas a llegar. Corre entero en Vercel, sin servidor propio y sin base de datos.
+Un dashboard para una sola cuenta de Instagram: cuántos seguidores tienes hoy, cuántos ganaste, cuánto te falta para la próxima meta y cuándo vas a llegar. Corre entero en Vercel, sin servidor propio y sin base de datos.
 
 Está desplegado como **[stats.piremos.com](https://stats.piremos.com)** para [@piremos.app](https://instagram.com/piremos.app), pero el repo no está atado a esa marca: nombre, logos, dominio, cuenta y **paleta completa** salen de variables de entorno.
 
@@ -14,7 +14,7 @@ Está desplegado como **[stats.piremos.com](https://stats.piremos.com)** para [@
 |---|---|
 | **Contador en vivo** | Seguidores actuales con el cambio del día, foto y nombre reales de la cuenta |
 | **Calendario de crecimiento** | Un cuadro por día, navegable por mes, con el neto del período |
-| **Calculadora de CPF** | Metés tu costo por seguidor y te dice cuánto cuesta llegar a 10k, 20k, 50k, 100k, 500k y 1M |
+| **Calculadora de CPF** | Metes tu costo por seguidor y te dice cuánto cuesta llegar a 10k, 20k, 50k, 100k, 500k y 1M |
 | **Proyección** | Media móvil exponencial sobre el histórico, con la fecha estimada de la próxima meta |
 | **Imagen para compartir** | Genera un PNG cuadrado con el crecimiento del día, la semana o el mes, listo para publicar |
 | **Claro y oscuro** | Dos temas reales, derivados de la misma paleta |
@@ -56,10 +56,10 @@ Más detalle en [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 ## Correrlo local
 
 ```bash
-git clone https://github.com/josuebustosn/trawi-stats.git
-cd trawi-stats
+git clone https://github.com/josuebustosn/instagram-growth-dashboard.git
+cd instagram-growth-dashboard
 npm install
-cp .env.example .env.local     # y poné tu APIFY_TOKEN
+cp .env.example .env.local     # y pon tu APIFY_TOKEN
 npm run dev
 ```
 
@@ -69,7 +69,7 @@ Sin `BLOB_READ_WRITE_TOKEN` guarda en `data/`, que está ignorado por git. Con s
 
 ## Usarlo con tu marca
 
-No hace falta tocar código. Poné tus archivos en `public/` y configurá estas variables:
+No hace falta tocar código. Pon tus archivos en `public/` y configura estas variables:
 
 ```bash
 NEXT_PUBLIC_BRAND_NAME=TuMarca
@@ -95,7 +95,7 @@ Los dos temas tratan esos colores distinto, y tiene que ser así: el púrpura `#
 
 > **Los colores se aceptan con o sin `#`.** En un archivo `.env` el `#` abre un comentario, así que `NEXT_PUBLIC_BRAND_PRIMARY=#4E2BCC` llegaría vacío y caería al valor por defecto sin avisar. Se acepta la forma pelada para que no haya trampa.
 
-> ⚠️ Todas las `NEXT_PUBLIC_*` se **inlinean en tiempo de build**. Configuralas antes del primer deploy; cambiar una después exige redeploy, no alcanza con editarla en el panel.
+> ⚠️ Todas las `NEXT_PUBLIC_*` se **inlinean en tiempo de build**. Configúralas antes del primer deploy; cambiar una después exige redeploy, no alcanza con editarla en el panel.
 
 ---
 
@@ -103,11 +103,11 @@ Los dos temas tratan esos colores distinto, y tiene que ser así: el púrpura `#
 
 Guía completa en [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md). El resumen:
 
-1. Importá el repo en Vercel
-2. Creá un Blob store **privado** y conectalo al proyecto
-3. Cargá `APIFY_TOKEN`, `NEXT_PUBLIC_INSTAGRAM_USERNAME` y `CRON_SECRET`
+1. Importa el repo en Vercel
+2. Crea un Blob store **privado** y conéctalo al proyecto
+3. Carga `APIFY_TOKEN`, `NEXT_PUBLIC_INSTAGRAM_USERNAME` y `CRON_SECRET`
 4. Deploy — los crons de `vercel.json` se activan solos
-5. **Verificá que `BLOB_READ_WRITE_TOKEN` esté puesta**
+5. **Verifica que `BLOB_READ_WRITE_TOKEN` esté puesta**
 
 El paso 5 no es burocracia: si esa variable falta, la app **no falla**. Cae al backend de disco, responde 200 con toda normalidad, y el histórico se borra en cada cold start sin un solo error en los logs.
 

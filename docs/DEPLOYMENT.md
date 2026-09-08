@@ -8,7 +8,7 @@ Hace falta: una cuenta de Vercel, una cuenta de [Apify](https://console.apify.co
 
 ## 1. El token de Apify
 
-En [console.apify.com](https://console.apify.com) → **Settings → API & Integrations** → copiá el *Personal API token*.
+En [console.apify.com](https://console.apify.com) → **Settings → API & Integrations** → copia el *Personal API token*.
 
 El Actor que se usa es `apify/instagram-followers-count-scraper`, que es pay-per-event: **$0,001 por arranque de corrida + $0,0026 por perfil**, o sea **$0,0036 por corrida**. Con los crons de este repo (cada 2 h más el de cierre de día) son unas **13 corridas al día ≈ $1,40 al mes**, dentro de los $5 mensuales del plan gratuito.
 
@@ -18,7 +18,7 @@ El Actor que se usa es `apify/instagram-followers-count-scraper`, que es pay-per
 
 ## 2. Importar el proyecto
 
-En Vercel → **Add New → Project** → elegí el repo. Framework detectado: Next.js. No cambies nada del build.
+En Vercel → **Add New → Project** → elige el repo. Framework detectado: Next.js. No cambies nada del build.
 
 **No hagas deploy todavía**: primero las variables, porque las `NEXT_PUBLIC_*` se inlinean en tiempo de build y un deploy sin ellas queda con los valores por defecto hasta que lo repitas.
 
@@ -32,9 +32,9 @@ Dos cosas del diálogo, y las dos importan:
 
 🔴 **Access: Private**, no Public. Las lecturas consistentes no existen en stores públicos, y sin ellas cada ciclo read-modify-write del histórico pierde actualizaciones sin avisar.
 
-🔴 **Marcá "Add a read-write token env var to this connection".** Viene DESMARCADO. Sin él, Vercel crea solo `BLOB_STORE_ID` y `BLOB_WEBHOOK_PUBLIC_KEY` (autenticación por OIDC), y `lib/storage.ts` decide qué backend usar mirando **`BLOB_READ_WRITE_TOKEN`**: si no existe, cae a disco en silencio. Es el fallo callado de siempre, entrando por un checkbox.
+🔴 **Marca "Add a read-write token env var to this connection".** Viene DESMARCADO. Sin él, Vercel crea solo `BLOB_STORE_ID` y `BLOB_WEBHOOK_PUBLIC_KEY` (autenticación por OIDC), y `lib/storage.ts` decide qué backend usar mirando **`BLOB_READ_WRITE_TOKEN`**: si no existe, cae a disco en silencio. Es el fallo callado de siempre, entrando por un checkbox.
 
-**Región:** elegí la misma donde corren las funciones (por defecto `iad1`), así la escritura no cruza el continente.
+**Región:** elige la misma donde corren las funciones (por defecto `iad1`), así la escritura no cruza el continente.
 
 Después de crear el store hace falta **redesplegar**: el proyecto tiene que levantar con la variable nueva.
 
@@ -42,7 +42,7 @@ Después de crear el store hace falta **redesplegar**: el proyecto tiene que lev
 
 ## 4. Las variables
 
-**Settings → Environment Variables.** Marcá las tres: Production, Preview y Development.
+**Settings → Environment Variables.** Marca las tres: Production, Preview y Development.
 
 | Variable | Valor | Obligatoria |
 |---|---|---|
@@ -60,7 +60,7 @@ openssl rand -hex 32
 
 Vercel manda ese valor como `Authorization: Bearer <secreto>` en cada disparo del cron, y la ruta rechaza todo lo demás. Sin la variable el endpoint queda abierto — sobrevivible, porque la cuenta es fija y el TTL acota el gasto, pero no hay razón para dejarlo así.
 
-Si vas a usar otra marca, agregá también las variables de `NEXT_PUBLIC_BRAND_*` (ver [`.env.example`](../.env.example)).
+Si vas a usar otra marca, agrega también las variables de `NEXT_PUBLIC_BRAND_*` (ver [`.env.example`](../.env.example)).
 
 ---
 
@@ -76,15 +76,15 @@ Si vas a usar otra marca, agregá también las variables de `NEXT_PUBLIC_BRAND_*
 
 > Si `BLOB_READ_WRITE_TOKEN` falta, la aplicación **no falla**. El selector cae al backend de disco, responde 200 con toda normalidad, y el histórico se borra en cada cold start sin un solo error en los logs. Meses después te encontrás con un histórico que empieza ayer.
 
-Comprobalo en **Storage → tu store → Browser**: después del primer pedido tienen que aparecer `history.json` y `cache.json`. Si el store quedó conectado solo a Production y Preview, desde tu máquina `vercel blob list` va a fallar con *"OIDC is enabled for this project, but not for the development environment"* — no es un problema, simplemente miralo desde el panel.
+Compruébalo en **Storage → tu store → Browser**: después del primer pedido tienen que aparecer `history.json` y `cache.json`. Si el store quedó conectado solo a Production y Preview, desde tu máquina `vercel blob list` va a fallar con *"OIDC is enabled for this project, but not for the development environment"* — no es un problema, simplemente míralo desde el panel.
 
-**b) Que el scrape funcione.** Abrí `https://tu-dominio/api/followers`. Tenés que ver el conteo, el `fullName` y el `profilePicUrl` reales:
+**b) Que el scrape funcione.** Abre `https://tu-dominio/api/followers`. Tienes que ver el conteo, el `fullName` y el `profilePicUrl` reales:
 
 ```json
 {"profile":{"username":"...","followers":4232,"following":15,"fullName":"...","profilePicUrl":"https://..."}, ...}
 ```
 
-**c) Que el cron corra más de una vez.** En **Settings → Cron Jobs** mirá la última ejecución, y volvé a mirar dos horas después. Un cron que corre una sola vez y no vuelve a correr es un fallo silencioso clásico: nada se rompe, simplemente el histórico deja de llenarse.
+**c) Que el cron corra más de una vez.** En **Settings → Cron Jobs** mira la última ejecución, y vuelve a mirar dos horas después. Un cron que corre una sola vez y no vuelve a correr es un fallo silencioso clásico: nada se rompe, simplemente el histórico deja de llenarse.
 
 Para forzar uno sin esperar:
 
@@ -96,7 +96,7 @@ curl -H "Authorization: Bearer $CRON_SECRET" https://tu-dominio/api/cron/refresh
 
 ## 7. El dominio
 
-**Settings → Domains → Add.** Poné el subdominio (`stats.tudominio.com`) y cargá el `CNAME` que te muestra Vercel en tu proveedor de DNS.
+**Settings → Domains → Add.** Pon el subdominio (`stats.tudominio.com`) y carga el `CNAME` que te muestra Vercel en tu proveedor de DNS.
 
 Si el dominio ya está en Vercel, se configura solo.
 
@@ -106,9 +106,9 @@ Si el dominio ya está en Vercel, se configura solo.
 
 **Ver logs:** pestaña **Logs** del proyecto, filtrando por `/api/`. Los prefijos son `[instagram]`, `[cron]` y `[Blob]`.
 
-**Cambiar de cuenta de Instagram:** editá `NEXT_PUBLIC_INSTAGRAM_USERNAME` y **redesplegá** — es una `NEXT_PUBLIC_`, no se lee en runtime. El histórico se guarda por username, así que la cuenta anterior queda intacta en el documento.
+**Cambiar de cuenta de Instagram:** edita `NEXT_PUBLIC_INSTAGRAM_USERNAME` y **redespliega** — es una `NEXT_PUBLIC_`, no se lee en runtime. El histórico se guarda por username, así que la cuenta anterior queda intacta en el documento.
 
-**Respaldar el histórico:** descargá `history.json` desde el panel del Blob store. Es todo el estado que no se puede reconstruir; la caché se rehace sola.
+**Respaldar el histórico:** descarga `history.json` desde el panel del Blob store. Es todo el estado que no se puede reconstruir; la caché se rehace sola.
 
 **Si el conteo se congela:** casi siempre es crédito de Apify agotado. El dashboard sigue sirviendo el último valor bueno con backoff de 15 minutos, y los logs muestran el error real de `[instagram]`.
 

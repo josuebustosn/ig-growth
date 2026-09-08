@@ -95,24 +95,9 @@ export default function Home() {
             style={{ borderRadius: '8px', transition: 'transform 0.2s ease', objectFit: 'contain' }}
             className="logo-hover"
           />
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{brand.name} 1.3.1</h1>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{brand.name} {brand.version}</h1>
         </a>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <a
-            href="/changelog"
-            style={{
-              fontSize: '0.85rem',
-              color: 'var(--text-muted)',
-              textDecoration: 'none',
-              padding: '0.4rem 0.8rem',
-              borderRadius: '8px',
-              background: 'var(--card-bg)',
-              border: '1px solid var(--card-border)',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            🎉 Cambios
-          </a>
           <ThemeToggle />
         </div>
       </header>

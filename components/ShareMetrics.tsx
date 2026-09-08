@@ -106,11 +106,17 @@ export default function ShareMetrics({ currentFollowers, history, username, load
         // month
         const last30 = history.slice(-30);
         const change = last30.reduce((sum, d) => sum + d.change, 0);
-        const monthName = new Date().toLocaleDateString('es-ES', { month: 'long', timeZone: 'America/Caracas' });
+        // Both parts come off the same Date in the same timezone: a hand-typed year had
+        // already gone stale ('Septiembre 2025' showing in September 2026), and reading the
+        // year from the dashboard's timezone rather than the viewer's keeps it consistent
+        // with the month beside it across a new year's boundary.
+        const now = new Date();
+        const monthName = now.toLocaleDateString('es-ES', { month: 'long', timeZone: 'America/Caracas' });
+        const year = now.toLocaleDateString('es-ES', { year: 'numeric', timeZone: 'America/Caracas' });
         return {
             label: 'Este Mes',
             change,
-            dateRange: monthName.charAt(0).toUpperCase() + monthName.slice(1) + ' 2025'
+            dateRange: `${monthName.charAt(0).toUpperCase()}${monthName.slice(1)} ${year}`
         };
     };
 
@@ -157,8 +163,8 @@ export default function ShareMetrics({ currentFollowers, history, username, load
 
         // Accent line at top
         const accentGradient = ctx.createLinearGradient(0, 0, size, 0);
-        accentGradient.addColorStop(0, '#3291ff');
-        accentGradient.addColorStop(1, '#d946ef');
+        accentGradient.addColorStop(0, brand.colors.primary);
+        accentGradient.addColorStop(1, brand.colors.accent);
         ctx.fillStyle = accentGradient;
         ctx.fillRect(0, 0, size, 5);
 
@@ -184,8 +190,8 @@ export default function ShareMetrics({ currentFollowers, history, username, load
 
         // Create gradient for the number
         const textGradient = ctx.createLinearGradient(40, 200, 400, 320);
-        textGradient.addColorStop(0, '#3291ff');
-        textGradient.addColorStop(1, '#d946ef');
+        textGradient.addColorStop(0, brand.colors.primary);
+        textGradient.addColorStop(1, brand.colors.accent);
         ctx.fillStyle = metrics.change >= 0 ? textGradient : '#f87171';
         ctx.fillText(changeText, 28, 280);
 
@@ -210,10 +216,16 @@ export default function ShareMetrics({ currentFollowers, history, username, load
         ctx.font = '14px Inter, system-ui, sans-serif';
         ctx.fillText(dateWithYear, 40, size - 30);
 
-        // Watermark - bottom right
+        // Watermark - bottom right. Built bottom-up out of the lines that actually have
+        // content, so the last one always lands on size - 30, the same baseline as the
+        // date drawn at bottom-left. Simply skipping an unset domain instead would leave
+        // the name stranded at size - 50, 20px above the date, with the foot of the image
+        // visibly lopsided.
+        const watermark = [`${brand.name} ${brand.version} ©`, brand.shareDomain].filter(Boolean);
         ctx.textAlign = 'right';
-        ctx.fillText(`${brand.name} 1.3 ©`, size - 40, size - 50);
-        ctx.fillText(brand.shareDomain, size - 40, size - 30);
+        watermark.forEach((line, i) => {
+            ctx.fillText(line, size - 40, size - 30 - (watermark.length - 1 - i) * 20);
+        });
         ctx.textAlign = 'left';
 
         setIsGenerating(false);
@@ -382,13 +394,13 @@ export default function ShareMetrics({ currentFollowers, history, username, load
                                 : '1px solid var(--card-border)',
                             cursor: 'pointer',
                             background: period === p.value
-                                ? 'rgba(50, 145, 255, 0.12)'
+                                ? `rgba(${brand.colors.primaryRgb}, 0.12)`
                                 : 'transparent',
                             color: period === p.value ? 'var(--primary)' : 'var(--text-muted)',
                             fontWeight: period === p.value ? '600' : '400',
                             transition: 'all 0.25s ease',
                             boxShadow: period === p.value
-                                ? '0 0 12px rgba(50, 145, 255, 0.2)'
+                                ? `0 0 12px rgba(${brand.colors.primaryRgb}, 0.2)`
                                 : 'none',
                         }}
                     >
@@ -432,7 +444,7 @@ export default function ShareMetrics({ currentFollowers, history, username, load
                         padding: '0.7rem',
                         borderRadius: '8px',
                         cursor: 'pointer',
-                        background: 'rgba(50, 145, 255, 0.15)',
+                        background: `rgba(${brand.colors.primaryRgb}, 0.15)`,
                         border: '1px solid var(--primary)',
                         color: 'var(--primary)',
                         fontWeight: '600',

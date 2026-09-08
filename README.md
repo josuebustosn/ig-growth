@@ -2,7 +2,7 @@
 
 > Dashboard inteligente de analytics para Instagram con proyecciones predictivas y milestones dinámicos.
 
-![Version](https://img.shields.io/badge/version-1.3-blue.svg)
+![Version](https://img.shields.io/badge/version-1.3.1-blue.svg)
 ![Next.js](https://img.shields.io/badge/Next.js-16.0-black.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
@@ -138,8 +138,6 @@ trawi-stats/
 │   ├── api/
 │   │   └── followers/
 │   │       └── route.ts          # API endpoint principal
-│   ├── changelog/
-│   │   └── page.tsx              # Página de changelog
 │   ├── layout.tsx                # Layout principal
 │   ├── page.tsx                  # Homepage
 │   └── globals.css               # Estilos globales
@@ -147,7 +145,6 @@ trawi-stats/
 │   ├── Calculators.tsx           # Calculadora de CPF
 │   ├── FollowerCounter.tsx       # Contador animado
 │   ├── GrowthCalendar.tsx        # Calendario con selector de meses
-│   ├── MusicPlayer.tsx           # Easter egg musical
 │   ├── ProjectionChart.tsx       # Gráfico de proyección inteligente
 │   ├── ShareMetrics.tsx          # Generador de imágenes
 │   └── ThemeToggle.tsx           # Switcher de tema
@@ -155,7 +152,6 @@ trawi-stats/
 │   ├── instagram-service.ts      # Servicio de Instagram
 │   └── storage.ts                # Sistema de caché
 ├── public/
-│   ├── changelog.json            # Historial de versiones
 │   └── ...                       # Assets estáticos
 ├── data/                         # Datos persistentes
 │   ├── history.json              # Historial de seguidores
@@ -324,7 +320,7 @@ Ver [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) para guía completa.
 **🗑️ Deprecated:**
 - Eliminada Calculadora de CPF Diario
 
-Ver [public/changelog.json](public/changelog.json) para historial completo.
+Historial completo: los mensajes de commit y las releases del repositorio.
 
 ---
 

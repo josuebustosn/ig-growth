@@ -4,8 +4,11 @@
   --foreground: #cdd6f4;
   --card-bg: rgba(30, 30, 50, 0.6);
   --card-border: rgba(255, 255, 255, 0.08);
-  --primary: #89b4fa;
-  --accent: #cba6f7;
+  /* The two brand colors are handed in by app/layout.tsx as --brand-*, sourced from
+     lib/brand.ts. They are deliberately not redefined per theme: the brand gradient
+     is the same in both, and both themes are dark anyway. */
+  --primary: var(--brand-primary);
+  --accent: var(--brand-accent);
   --success: #a6e3a1;
   --danger: #f38ba8;
   --text-muted: #7f849c;
@@ -19,8 +22,6 @@
   --foreground: #ededed;
   --card-bg: rgba(20, 20, 20, 0.6);
   --card-border: rgba(255, 255, 255, 0.1);
-  --primary: #3291ff;
-  --accent: #d946ef;
   --success: #34d399;
   --danger: #f87171;
   --text-muted: #a1a1a1;

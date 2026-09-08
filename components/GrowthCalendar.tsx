@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useRef, useEffect } from 'react';
+import { brand } from '@/lib/brand';
 
 interface DailyStats {
     date: string;
@@ -174,7 +175,7 @@ export default function GrowthCalendar({ history = [], loading = false }: { hist
                                             width: '100%',
                                             padding: '0.6rem 1rem',
                                             border: 'none',
-                                            background: selectedPeriod === option.value ? 'rgba(50, 145, 255, 0.15)' : 'transparent',
+                                            background: selectedPeriod === option.value ? `rgba(${brand.colors.primaryRgb}, 0.15)` : 'transparent',
                                             color: selectedPeriod === option.value ? 'var(--primary)' : 'var(--foreground)',
                                             fontSize: '0.85rem',
                                             cursor: 'pointer',
@@ -188,7 +189,7 @@ export default function GrowthCalendar({ history = [], loading = false }: { hist
                                         }}
                                         onMouseLeave={(e) => {
                                             e.currentTarget.style.background = selectedPeriod === option.value
-                                                ? 'rgba(50, 145, 255, 0.15)' : 'transparent';
+                                                ? `rgba(${brand.colors.primaryRgb}, 0.15)` : 'transparent';
                                         }}
                                     >
                                         {option.label}

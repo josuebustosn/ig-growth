@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import ThemeToggle from '@/components/ThemeToggle';
+import { brand } from '@/lib/brand';
 
 interface ChangelogEntry {
     version: string;
@@ -43,14 +44,14 @@ export default function ChangelogPage() {
                     style={{ display: 'flex', alignItems: 'center', gap: '1rem', textDecoration: 'none', color: 'inherit' }}
                 >
                     <Image
-                        src="/trawi-logo.jpg"
-                        alt="Trawi Logo"
+                        src={brand.headerLogo}
+                        alt={`${brand.name} Logo`}
                         width={50}
                         height={50}
-                        style={{ borderRadius: '8px' }}
+                        style={{ borderRadius: '8px', objectFit: 'contain' }}
                         className="logo-hover"
                     />
-                    <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>TrawiStats 1.3.1</h1>
+                    <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{brand.name} 1.3.1</h1>
                 </Link>
                 <ThemeToggle />
             </header>
@@ -154,22 +155,6 @@ export default function ChangelogPage() {
                     ))}
                 </div>
             )}
-
-            {/* Easter egg credit */}
-            <div style={{
-                display: 'flex',
-                justifyContent: 'center',
-                marginTop: '3rem',
-                opacity: 0.7
-            }}>
-                <Image
-                    src="/Trawayana.png"
-                    alt="Trawayana"
-                    width={120}
-                    height={120}
-                    style={{ borderRadius: '12px' }}
-                />
-            </div>
 
             <footer style={{ textAlign: 'center', marginTop: '2rem', padding: '1rem', opacity: 0.6 }}>
                 <Link href="/" style={{ color: 'var(--primary)' }}>← Volver al Dashboard</Link>

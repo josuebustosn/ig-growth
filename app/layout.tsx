@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { brand } from "@/lib/brand";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -13,10 +14,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TrawiStats",
-  description: "Monitor de crecimiento de seguidores para Trawi Viajes",
+  title: brand.name,
+  description: brand.description,
   icons: {
-    icon: '/trawi-logo.jpg',
+    icon: brand.favicon,
   },
 };
 

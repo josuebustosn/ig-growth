@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { brand } from '@/lib/brand';
 
 interface ShareMetricsProps {
     currentFollowers: number;
@@ -126,25 +127,33 @@ export default function ShareMetrics({ currentFollowers, history, username, load
         canvas.width = size;
         canvas.height = size;
 
-        // Load background image (Trawayana)
-        const bgImage = new Image();
-        bgImage.crossOrigin = 'anonymous';
+        if (brand.shareBackground.startsWith('#')) {
+            // Solid brand color. No blur and no darkening overlay: both exist to
+            // make text readable over a photo, and the 80% black overlay below
+            // would crush any brand color to near-black (#0F032D -> #030109).
+            ctx.fillStyle = brand.shareBackground;
+            ctx.fillRect(0, 0, size, size);
+        } else {
+            // Load background image
+            const bgImage = new Image();
+            bgImage.crossOrigin = 'anonymous';
 
-        await new Promise<void>((resolve) => {
-            bgImage.onload = () => resolve();
-            bgImage.onerror = () => resolve();
-            bgImage.src = '/Trawayana.png';
-        });
+            await new Promise<void>((resolve) => {
+                bgImage.onload = () => resolve();
+                bgImage.onerror = () => resolve();
+                bgImage.src = brand.shareBackground;
+            });
 
-        // Draw background image
-        ctx.drawImage(bgImage, -50, -50, size + 100, size + 100);
+            // Draw background image
+            ctx.drawImage(bgImage, -50, -50, size + 100, size + 100);
 
-        // Apply manual blur (works on iOS/Safari)
-        applyBoxBlur(ctx, size, size, 8);
+            // Apply manual blur (works on iOS/Safari)
+            applyBoxBlur(ctx, size, size, 8);
 
-        // Darken the image (more darkness)
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-        ctx.fillRect(0, 0, size, size);
+            // Darken the image (more darkness)
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            ctx.fillRect(0, 0, size, size);
+        }
 
         // Accent line at top
         const accentGradient = ctx.createLinearGradient(0, 0, size, 0);
@@ -160,7 +169,7 @@ export default function ShareMetrics({ currentFollowers, history, username, load
         await new Promise<void>((resolve) => {
             logo.onload = () => resolve();
             logo.onerror = () => resolve();
-            logo.src = '/Trawi_Logo_Sinfondo.png';
+            logo.src = brand.canvasLogo;
         });
 
         // Draw logo (top right, smaller, more transparent)
@@ -180,7 +189,7 @@ export default function ShareMetrics({ currentFollowers, history, username, load
         ctx.fillStyle = metrics.change >= 0 ? textGradient : '#f87171';
         ctx.fillText(changeText, 28, 280);
 
-        // Label with "en @trawi.viajes" (aligned with number)
+        // Label with "en @<username>" (aligned with number)
         ctx.fillStyle = '#ffffff';
         ctx.font = '28px Inter, system-ui, sans-serif';
         ctx.fillText('seguidores ' + metrics.label.toLowerCase() + ' en @' + username, 40, 330);
@@ -203,8 +212,8 @@ export default function ShareMetrics({ currentFollowers, history, username, load
 
         // Watermark - bottom right
         ctx.textAlign = 'right';
-        ctx.fillText('TrawiStats 1.3 ©', size - 40, size - 50);
-        ctx.fillText('stats.trawi.net', size - 40, size - 30);
+        ctx.fillText(`${brand.name} 1.3 ©`, size - 40, size - 50);
+        ctx.fillText(brand.shareDomain, size - 40, size - 30);
         ctx.textAlign = 'left';
 
         setIsGenerating(false);
@@ -257,13 +266,13 @@ export default function ShareMetrics({ currentFollowers, history, username, load
         const blob = existingBlob || await generateImage();
         if (!blob) return;
 
-        const file = new File([blob], `trawistats-${period}.png`, { type: 'image/png' });
+        const file = new File([blob], `${brand.slug}-${period}.png`, { type: 'image/png' });
 
         if (navigator.share && navigator.canShare?.({ files: [file] })) {
             try {
                 await navigator.share({
                     files: [file],
-                    title: 'TrawiStats',
+                    title: brand.name,
                     text: `Mira mi crecimiento en @${username}!`
                 });
                 showFeedback('share');
@@ -286,13 +295,13 @@ export default function ShareMetrics({ currentFollowers, history, username, load
 
         // On mobile, prefer share
         const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-        const file = new File([blob], `trawistats-${period}.png`, { type: 'image/png' });
+        const file = new File([blob], `${brand.slug}-${period}.png`, { type: 'image/png' });
 
         if (isMobile && navigator.share && navigator.canShare?.({ files: [file] })) {
             try {
                 await navigator.share({
                     files: [file],
-                    title: 'TrawiStats',
+                    title: brand.name,
                     text: `Mira mi crecimiento en @${username}!`
                 });
                 showFeedback('share');
@@ -310,7 +319,7 @@ export default function ShareMetrics({ currentFollowers, history, username, load
     const downloadBlob = (blob: Blob) => {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
-        link.download = `trawistats-${period}-${Date.now()}.png`;
+        link.download = `${brand.slug}-${period}-${Date.now()}.png`;
         link.href = url;
         link.click();
         URL.revokeObjectURL(url);

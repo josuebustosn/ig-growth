@@ -1,7 +1,7 @@
 import * as disk from './storage-disk';
-import type { DailyStats } from './storage-disk';
+import type { DailyStats, CachedProfile, ProfileSnapshot } from './storage-disk';
 
-export type { DailyStats };
+export type { DailyStats, CachedProfile, ProfileSnapshot };
 
 // Two backends, picked by whether a blob token is present. Without one the disk
 // backend runs exactly as it always has — storage-disk.ts is the previous
@@ -34,14 +34,14 @@ export async function saveDailyStats(username: string, followers: number): Promi
     return useBlob() ? (await blob()).saveDailyStats(username, followers) : disk.saveDailyStats(username, followers);
 }
 
-export async function getCachedProfile(username: string): Promise<{ followers: number, lastUpdated: number, expiresAt: number, lastEndOfDaySync?: string } | null> {
+export async function getCachedProfile(username: string): Promise<CachedProfile | null> {
     return useBlob() ? (await blob()).getCachedProfile(username) : disk.getCachedProfile(username);
 }
 
-export async function saveCachedProfile(username: string, followers: number, isEndOfDaySync: boolean = false, ttl: number = 2 * 60 * 60 * 1000): Promise<void> {
+export async function saveCachedProfile(username: string, snapshot: ProfileSnapshot, isEndOfDaySync: boolean = false, ttl: number = 2 * 60 * 60 * 1000): Promise<void> {
     if (useBlob()) {
-        await (await blob()).saveCachedProfile(username, followers, isEndOfDaySync, ttl);
+        await (await blob()).saveCachedProfile(username, snapshot, isEndOfDaySync, ttl);
         return;
     }
-    disk.saveCachedProfile(username, followers, isEndOfDaySync, ttl);
+    disk.saveCachedProfile(username, snapshot, isEndOfDaySync, ttl);
 }

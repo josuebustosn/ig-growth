@@ -1,7 +1,6 @@
 import { ApifyClient } from 'apify-client';
-import path from 'path';
 import { getCachedProfile, saveCachedProfile } from './storage';
-import fs from 'fs';
+import type { CachedProfile } from './storage';
 
 // Apify Actor: instagram-scraper
 const APIFY_ACTOR_ID = '7RQ4RlfRihUhflQtJ';
@@ -11,11 +10,39 @@ const APIFY_ACTOR_ID = '7RQ4RlfRihUhflQtJ';
 // APIFY_WAIT_SECS and each deployment tunes it to fit its own limit.
 const DEFAULT_APIFY_WAIT_SECS = 50;
 
-// Shape of the fields we read off the Actor's dataset items.
+// Shape of the fields we read off the Actor's dataset items. Verified against a
+// real run: a found profile carries profilePic, userName, followersCount,
+// followsCount, userFullName, userUrl and userId; a missing or private one comes
+// back as { url, username, error, errorDescription } instead — same HTTP 200,
+// same SUCCEEDED run, so the error field is the only thing that distinguishes it.
 type ApifyProfileItem = {
     followersCount?: unknown;
     followers?: unknown;
+    followsCount?: unknown;
+    userFullName?: unknown;
+    profilePic?: unknown;
+    error?: unknown;
+    errorDescription?: unknown;
 };
+
+// The Actor reports a bad handle in-band rather than by failing the run. Without
+// this the caller only saw "could not find followers count", which reads like a
+// shape change in the response when it actually means the account is not there.
+function assertNoActorError(item: ApifyProfileItem, username: string): void {
+    if (!item.error) return;
+    const detail = typeof item.errorDescription === 'string' && item.errorDescription
+        ? item.errorDescription
+        : String(item.error);
+    throw new Error(`Apify could not read @${username}: ${detail}`);
+}
+
+function asText(value: unknown): string {
+    return typeof value === 'string' ? value : '';
+}
+
+function asCount(value: unknown): number {
+    return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : 0;
+}
 
 // Renders a rejected value for the error message. JSON.stringify() alone is not
 // enough: it prints NaN and Infinity as `null`, which hides what actually arrived.
@@ -60,7 +87,15 @@ function getApifyWaitSecs(): number {
     return parsed;
 }
 
-async function fetchFollowersFromApify(username: string): Promise<number> {
+/** Everything the Actor gives us that is worth keeping. */
+interface ScrapedProfile {
+    followers: number;
+    following: number;
+    fullName: string;
+    profilePicUrl: string;
+}
+
+async function fetchProfileFromApify(username: string): Promise<ScrapedProfile> {
     const token = process.env.APIFY_TOKEN;
     if (!token) {
         throw new Error('APIFY_TOKEN environment variable not set.');
@@ -92,6 +127,8 @@ async function fetchFollowersFromApify(username: string): Promise<number> {
     }
 
     const userData = items[0];
+    assertNoActorError(userData, username);
+
     // Fallback to 'followers' in case the Actor changes its output shape.
     const rawFollowers = userData.followersCount ?? userData.followers;
 
@@ -125,7 +162,28 @@ async function fetchFollowersFromApify(username: string): Promise<number> {
         );
     }
 
-    return followers;
+    // These three were already being paid for on every run and thrown away: the
+    // service returned a hardcoded empty picture, a zero following count and the
+    // handle as the display name. They cost nothing extra to keep.
+    return {
+        followers,
+        following: asCount(userData.followsCount),
+        fullName: asText(userData.userFullName) || username,
+        profilePicUrl: asText(userData.profilePic),
+    };
+}
+
+// A cached entry written before the profile fields existed still serves: the
+// counter is what the dashboard is for, the name and picture are decoration.
+function toProfile(username: string, cached: CachedProfile): InstagramProfile {
+    return {
+        username,
+        fullName: cached.fullName || username,
+        followers: cached.followers,
+        following: cached.following ?? 0,
+        profilePicUrl: cached.profilePicUrl || '',
+        biography: '',
+    };
 }
 
 const activeRequests = new Map<string, Promise<InstagramProfile | null>>();
@@ -163,9 +221,6 @@ async function fetchProfile(username: string): Promise<InstagramProfile | null> 
         const minutes = venezuelaTime.getMinutes();
         const todayStr = now.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
 
-        // Debug Log (Temporary, to verify it works)
-        console.log(`[Time Check] VZLA: ${hours}:${minutes.toString().padStart(2, '0')} | Window Active: ${hours === 23 && minutes >= 50}`);
-
         // Check if we are in the "End of Day" window (23:50 - 23:59)
         if (hours === 23 && minutes >= 50) {
             // Check if we already synced today
@@ -178,14 +233,7 @@ async function fetchProfile(username: string): Promise<InstagramProfile | null> 
 
         if (!forceUpdate && cached && (Date.now() < cached.expiresAt)) {
             console.log(`Using cached data for ${username} (Expires at: ${new Date(cached.expiresAt).toLocaleTimeString()})`);
-            return {
-                username,
-                fullName: username,
-                followers: cached.followers,
-                following: 0,
-                profilePicUrl: '',
-                biography: ''
-            };
+            return toProfile(username, cached);
         }
 
         // 2. Fetch from Apify
@@ -196,51 +244,26 @@ async function fetchProfile(username: string): Promise<InstagramProfile | null> 
         }
 
         console.log(`Fetching fresh data for ${username} via Apify...`);
-        const followers = await fetchFollowersFromApify(username);
+        const scraped = await fetchProfileFromApify(username);
 
         // 3. Update Cache
-        await saveCachedProfile(username, followers, isEndOfDaySync);
+        await saveCachedProfile(username, scraped, isEndOfDaySync);
 
-        return {
-            username,
-            fullName: username,
-            followers,
-            following: 0,
-            profilePicUrl: '',
-            biography: ''
-        };
+        return { username, biography: '', ...scraped };
 
     } catch (error) {
-        console.error('Error fetching Instagram profile:', error);
-
-        // Log error to file for debugging
-        try {
-            const logPath = path.join(process.cwd(), 'debug_error.log');
-            const timestamp = new Date().toISOString();
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            // Include stack trace if available
-            const stack = error instanceof Error ? error.stack : '';
-            const logEntry = `[${timestamp}] Error for ${username}: ${errorMessage}\nStack: ${stack}\n-------------------\n`;
-            fs.appendFileSync(logPath, logEntry);
-        } catch (e) {
-            console.error('Failed to write to log file:', e);
-        }
+        // The hosting platform collects stderr. Writing our own file does not work
+        // on a read-only serverless filesystem and only produced a second error.
+        console.error(`[instagram] Fetch failed for ${username}:`, error);
 
         // Fallback to cache if available even if expired, and update timestamp to prevent Loop
         const cached = await getCachedProfile(username);
         if (cached) {
             console.log(`[Error Recovery] Using old cache for ${username} and backing off for 15 mins.`);
             // Update cache with backoff (15 mins) to prevent immediate retry loop
-            await saveCachedProfile(username, cached.followers, false, 15 * 60 * 1000);
+            await saveCachedProfile(username, { followers: cached.followers }, false, 15 * 60 * 1000);
 
-            return {
-                username,
-                fullName: username,
-                followers: cached.followers,
-                following: 0,
-                profilePicUrl: '',
-                biography: ''
-            };
+            return toProfile(username, cached);
         }
 
         return null;

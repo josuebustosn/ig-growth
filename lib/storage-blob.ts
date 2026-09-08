@@ -1,5 +1,5 @@
 import { get, put, BlobError, BlobServiceRateLimited } from '@vercel/blob';
-import type { DailyStats } from './storage-disk';
+import type { DailyStats, CachedProfile, ProfileSnapshot } from './storage-disk';
 
 // Keys in the blob store. These replace the on-disk paths: there is no filesystem
 // here, so nothing derived from process.cwd() would mean anything.
@@ -33,12 +33,7 @@ interface HistoryData {
 }
 
 interface CacheData {
-    [username: string]: {
-        followers: number;
-        lastUpdated: number;
-        expiresAt: number;
-        lastEndOfDaySync?: string; // YYYY-MM-DD
-    }
+    [username: string]: CachedProfile;
 }
 
 // What to do when a blob exists but its content will not parse. The two documents
@@ -169,22 +164,27 @@ export async function saveDailyStats(username: string, followers: number): Promi
     throw lastError;
 }
 
-export async function getCachedProfile(username: string): Promise<{ followers: number, lastUpdated: number, expiresAt: number, lastEndOfDaySync?: string } | null> {
+export async function getCachedProfile(username: string): Promise<CachedProfile | null> {
     const { data } = await readJson<CacheData>(CACHE_KEY, 'treat-as-empty');
     return data[username] || null;
 }
 
 // Last-write-wins on purpose: no ifMatch, no retry. The cache is reconstructible, and
 // losing a write here costs one extra scrape rather than corrupting a record.
-export async function saveCachedProfile(username: string, followers: number, isEndOfDaySync: boolean = false, ttl: number = 2 * 60 * 60 * 1000): Promise<void> {
+export async function saveCachedProfile(username: string, snapshot: ProfileSnapshot, isEndOfDaySync: boolean = false, ttl: number = 2 * 60 * 60 * 1000): Promise<void> {
     const { data: cache } = await readJson<CacheData>(CACHE_KEY, 'treat-as-empty');
 
     const expiresAt = Date.now() + ttl;
 
-    const existingData = cache[username] || {};
+    const existingData = cache[username] || ({} as CachedProfile);
 
     cache[username] = {
-        followers,
+        followers: snapshot.followers,
+        // Mirrors storage-disk: a backoff write only carries the follower count,
+        // so the name and picture are preserved rather than blanked.
+        following: snapshot.following ?? existingData.following,
+        fullName: snapshot.fullName ?? existingData.fullName,
+        profilePicUrl: snapshot.profilePicUrl ?? existingData.profilePicUrl,
         lastUpdated: Date.now(),
         expiresAt,
         lastEndOfDaySync: isEndOfDaySync ? new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' }) : existingData.lastEndOfDaySync

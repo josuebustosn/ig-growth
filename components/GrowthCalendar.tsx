@@ -154,7 +154,7 @@ export default function GrowthCalendar({ history = [], loading = false }: { hist
                                 background: 'var(--background)',
                                 border: '1px solid var(--card-border)',
                                 borderRadius: '10px',
-                                boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+                                boxShadow: '0 8px 24px var(--control-bg)',
                                 zIndex: 50,
                                 overflow: 'hidden',
                                 animation: 'dropdownIn 0.15s ease-out'
@@ -174,7 +174,7 @@ export default function GrowthCalendar({ history = [], loading = false }: { hist
                                             width: '100%',
                                             padding: '0.6rem 1rem',
                                             border: 'none',
-                                            background: selectedPeriod === option.value ? 'rgba(50, 145, 255, 0.15)' : 'transparent',
+                                            background: selectedPeriod === option.value ? 'color-mix(in srgb, var(--primary) 15%, transparent)' : 'transparent',
                                             color: selectedPeriod === option.value ? 'var(--primary)' : 'var(--foreground)',
                                             fontSize: '0.85rem',
                                             cursor: 'pointer',
@@ -184,11 +184,11 @@ export default function GrowthCalendar({ history = [], loading = false }: { hist
                                         }}
                                         onMouseEnter={(e) => {
                                             if (selectedPeriod !== option.value)
-                                                e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                                                e.currentTarget.style.background = 'color-mix(in srgb, var(--foreground) 5%, transparent)';
                                         }}
                                         onMouseLeave={(e) => {
                                             e.currentTarget.style.background = selectedPeriod === option.value
-                                                ? 'rgba(50, 145, 255, 0.15)' : 'transparent';
+                                                ? 'color-mix(in srgb, var(--primary) 15%, transparent)' : 'transparent';
                                         }}
                                     >
                                         {option.label}
@@ -200,7 +200,7 @@ export default function GrowthCalendar({ history = [], loading = false }: { hist
                     <span style={{
                         padding: '0.4rem 0.8rem',
                         borderRadius: '20px',
-                        background: periodTotal >= 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                        background: periodTotal >= 0 ? 'color-mix(in srgb, var(--success) 15%, transparent)' : 'color-mix(in srgb, var(--danger) 15%, transparent)',
                         color: periodTotal >= 0 ? 'var(--success)' : 'var(--danger)',
                         fontWeight: '600',
                         fontSize: '0.9rem',
@@ -226,7 +226,7 @@ export default function GrowthCalendar({ history = [], loading = false }: { hist
                             justifyContent: 'center',
                             padding: '0.5rem',
                             borderRadius: '8px',
-                            background: day.change >= 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                            background: day.change >= 0 ? 'color-mix(in srgb, var(--success) 10%, transparent)' : 'color-mix(in srgb, var(--danger) 10%, transparent)',
                             border: `1px solid ${day.change >= 0 ? 'var(--success)' : 'var(--danger)'}`,
                             color: day.change >= 0 ? 'var(--success)' : 'var(--danger)',
                             cursor: 'default',

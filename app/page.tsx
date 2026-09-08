@@ -14,6 +14,7 @@ import Image from 'next/image';
 interface DashboardData {
   profile: {
     followers: number;
+    fullName?: string;
     profilePicUrl?: string;
   };
   history: { date: string; followers: number; change: number }[];
@@ -30,7 +31,7 @@ export default function Home() {
   const [error, setError] = useState('');
   const [lastFetch, setLastFetch] = useState<number | null>(cachedLastFetch);
 
-  const username = brand.defaultUsername;
+  const username = brand.username;
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -41,7 +42,7 @@ export default function Home() {
 
     const fetchData = async () => {
       try {
-        const fetchPromise = fetch(`/api/followers?username=${username}`).then(res => {
+        const fetchPromise = fetch('/api/followers').then(res => {
           if (!res.ok) throw new Error('Failed to fetch');
           return res.json();
         });
@@ -95,26 +96,12 @@ export default function Home() {
             style={{ borderRadius: '8px', transition: 'transform 0.2s ease', objectFit: 'contain' }}
             className="logo-hover"
           />
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{brand.name} 1.3.1</h1>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, letterSpacing: '-0.02em' }}>
+            {brand.name}{' '}
+            <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>{brand.product}</span>
+          </h1>
         </a>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <a
-            href="/changelog"
-            style={{
-              fontSize: '0.85rem',
-              color: 'var(--text-muted)',
-              textDecoration: 'none',
-              padding: '0.4rem 0.8rem',
-              borderRadius: '8px',
-              background: 'var(--card-bg)',
-              border: '1px solid var(--card-border)',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            🎉 Cambios
-          </a>
-          <ThemeToggle />
-        </div>
+        <ThemeToggle />
       </header>
 
       <div className="grid" style={{ gap: '2rem' }}>
@@ -123,6 +110,7 @@ export default function Home() {
           <FollowerCounter
             username={username}
             followers={data?.profile?.followers || 0}
+            fullName={data?.profile?.fullName}
             profilePicUrl={data?.profile?.profilePicUrl || ''}
             loading={loading && !data}
             todayChange={getTodayChange()}
@@ -131,7 +119,7 @@ export default function Home() {
         </section>
 
         {/* Growth + Calculators side by side */}
-        <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
+        <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', alignItems: 'start' }}>
           <GrowthCalendar history={data?.history || []} loading={loading && !data} />
           <Calculators
             currentFollowers={data?.profile?.followers || 0}

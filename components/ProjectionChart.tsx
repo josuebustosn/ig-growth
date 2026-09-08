@@ -13,6 +13,7 @@ import {
     Area,
     ComposedChart
 } from 'recharts';
+import { formatCount } from '@/lib/format';
 
 interface DailyStats {
     date: string;
@@ -209,7 +210,7 @@ export default function ProjectionChart({ history, currentFollowers, loading = f
     const formatMilestone = (num: number) => {
         if (num >= 1000000) return `${(num / 1000000).toFixed(0)}M`;
         if (num >= 1000) return `${(num / 1000).toFixed(0)}k`;
-        return num.toLocaleString('es-ES');
+        return formatCount(num);
     };
 
     // Progress bar calculations for next milestone
@@ -237,7 +238,7 @@ export default function ProjectionChart({ history, currentFollowers, loading = f
                             padding: '0.4rem',
                             borderRadius: '6px',
                             border: '1px solid var(--card-border)',
-                            background: 'rgba(0,0,0,0.2)',
+                            background: 'var(--control-bg)',
                             color: 'var(--foreground)',
                             width: '80px'
                         }}
@@ -258,7 +259,7 @@ export default function ProjectionChart({ history, currentFollowers, loading = f
                                 <stop offset="95%" stopColor="var(--accent)" stopOpacity={0} />
                             </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--control-border)" vertical={false} />
                         <XAxis
                             dataKey="date"
                             tickFormatter={formatXAxis}
@@ -275,7 +276,7 @@ export default function ProjectionChart({ history, currentFollowers, loading = f
                         <Tooltip
                             contentStyle={{ backgroundColor: 'var(--card-bg)', border: 'var(--glass-border)', borderRadius: '8px' }}
                             labelStyle={{ color: 'var(--foreground)' }}
-                            formatter={(value, name) => [Number(value).toLocaleString('es-ES'), name === 'actual' ? 'Real' : 'Proyección']}
+                            formatter={(value, name) => [formatCount(Number(value)), name === 'actual' ? 'Real' : 'Proyección']}
                             labelFormatter={(label) => new Date(label + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                         />
 
@@ -325,7 +326,7 @@ export default function ProjectionChart({ history, currentFollowers, loading = f
             <div style={{
                 marginTop: '1.5rem',
                 padding: '1rem',
-                background: 'rgba(0,0,0,0.2)',
+                background: 'var(--control-bg)',
                 borderRadius: '12px'
             }}>
                 <div style={{
@@ -336,7 +337,7 @@ export default function ProjectionChart({ history, currentFollowers, loading = f
                 }}>
                     <span style={{ fontWeight: '600' }}>🎯 Meta: {formatMilestone(nextMilestone)} seguidores</span>
                     <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                        {currentFollowers.toLocaleString('en-US')} / {formatMilestone(nextMilestone)}
+                        {formatCount(currentFollowers)} / {formatMilestone(nextMilestone)}
                     </span>
                 </div>
 
@@ -344,7 +345,7 @@ export default function ProjectionChart({ history, currentFollowers, loading = f
                 <div style={{
                     width: '100%',
                     height: '12px',
-                    background: 'rgba(255,255,255,0.1)',
+                    background: 'var(--control-border)',
                     borderRadius: '6px',
                     overflow: 'hidden',
                     marginBottom: '0.8rem'
@@ -367,7 +368,7 @@ export default function ProjectionChart({ history, currentFollowers, loading = f
                 }}>
                     <span>
                         Faltan: <span style={{ color: 'var(--foreground)', fontWeight: '600' }}>
-                            {followersRemaining.toLocaleString('en-US')}
+                            {formatCount(followersRemaining)}
                         </span>
                     </span>
                     {estimatedDate && daysToMilestone && (
@@ -393,7 +394,7 @@ export default function ProjectionChart({ history, currentFollowers, loading = f
                                 alignItems: 'center',
                                 gap: '0.3rem',
                                 padding: '0.3rem 0.6rem',
-                                background: 'rgba(16, 185, 129, 0.15)',
+                                background: 'color-mix(in srgb, var(--success) 15%, transparent)',
                                 border: '1px solid var(--success)',
                                 borderRadius: '12px',
                                 fontSize: '0.8rem',

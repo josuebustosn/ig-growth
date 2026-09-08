@@ -45,7 +45,7 @@ Navegador  ───┘            │
 
 **La caché** evita pagar por cada visita. Un pedido dentro de la ventana de 2 horas se sirve de lo guardado sin tocar Apify. Si el scrape falla y hay algo en caché, se devuelve el valor viejo con un backoff de 15 minutos en vez de un error.
 
-**El histórico** es acumulativo y no se reconstruye: si falta un día, falta para siempre. Por eso hay dos crons — uno cada 2 horas y otro a las **23:55 hora de Venezuela**, para registrar el número con el que cierra el día aunque nadie abra la página.
+**El histórico** es acumulativo y no se reconstruye: si falta un día, falta para siempre. Por eso hay un cron que corre cada 2 horas a los `:55`, lo que además hace que una de esas corridas caiga a las **23:55 hora de Venezuela** — la ventana en la que se registra el número con el que cierra el día, aunque nadie haya abierto la página.
 
 **La persistencia** elige backend sola: con `BLOB_READ_WRITE_TOKEN` escribe en Vercel Blob, sin ella en `data/*.json` en disco. El mismo código corre en Vercel y en un VPS.
 
@@ -129,7 +129,9 @@ Sin base de datos y sin dependencias de UI: los estilos son CSS plano con custom
 
 **Un documento ilegible se trata distinto según cuál sea.** Si `history.json` existe pero no parsea, se lanza y no se toca: es el único registro que no se puede rehacer. Si es `cache.json`, se sigue como si estuviera vacío: una caché ilegible es un cache miss.
 
-**Los crons van en UTC.** Venezuela es UTC-4, así que el cierre de día está agendado a las `03:55 UTC`. Escrito como `23:55` dispararía a las 19:55 locales y erraría la ventana en silencio.
+**Un solo cron, no dos.** Vercel registra **una** entrada por path: dos definiciones apuntando a la misma ruta no corren las dos, y la segunda nunca dispara sin decirlo. Por eso hay un único schedule que cubre los dos trabajos.
+
+**Y los crons van en UTC.** Venezuela es UTC-4, así que la ventana de cierre de día (23:50–23:59 local) son las 03:50–03:59 UTC. El schedule dispara a los `:55` de cada hora impar: doce corridas al día, con una a las `03:55 UTC` = 23:55 local. Escrito como `23:55` erraría la ventana en silencio.
 
 ---
 

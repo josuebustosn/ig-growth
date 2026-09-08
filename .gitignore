@@ -46,3 +46,6 @@ next-env.d.ts
 /data/
 /shots/
 
+
+# secreto local del cron, nunca se commitea
+.cron-secret.tmp

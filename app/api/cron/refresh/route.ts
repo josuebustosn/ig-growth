@@ -12,11 +12,17 @@ export const dynamic = 'force-dynamic';
  * nobody loaded the dashboard in those ten minutes, the number the day closed on
  * was never recorded — and a gap in a cumulative history does not heal.
  *
- * ⚠️ Vercel crons run in UTC. Venezuela is UTC-4, so the end-of-day run is
- * scheduled at 03:55 UTC (= 23:55 local). Setting it to 23:55 would fire at 19:55
- * local and miss the window entirely, silently.
+ * ⚠️ Two things about the schedule, both learned the hard way.
  *
- * Schedules live in vercel.json.
+ * Vercel registers ONE cron per path. Two entries in vercel.json pointing at the
+ * same route do not both run — `vercel crons ls` reports them as a permanently
+ * "modified" single job, and the second one silently never fires. So this is one
+ * schedule that has to cover both jobs.
+ *
+ * And crons run in UTC. Venezuela is UTC-4, so the end-of-day window (23:50-23:59
+ * local) is 03:50-03:59 UTC. The schedule fires at :55 past every odd hour, which
+ * is twelve runs a day AND puts one at 03:55 UTC = 23:55 local, inside the window.
+ * Writing it as 23:55 would fire at 19:55 local and miss it entirely, in silence.
  */
 export async function GET(request: NextRequest) {
     const cronSecret = process.env.CRON_SECRET;

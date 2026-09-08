@@ -60,7 +60,7 @@ Si vas a usar otra marca, agregá también las variables de `NEXT_PUBLIC_BRAND_*
 
 ## 5. Deploy
 
-**Deployments → Deploy.** Los dos crons de `vercel.json` se registran solos; los ves en **Settings → Cron Jobs**.
+**Deployments → Deploy.** El cron de `vercel.json` se registra solo; lo ves en **Settings → Cron Jobs**.
 
 ---
 
@@ -123,6 +123,5 @@ pm2 start npm --name stats -- start
 Ahí no hay Vercel Cron, así que el refresco queda a cargo de crontab. Ojo con la zona horaria: si el servidor está en UTC, el cierre de día de Venezuela son las `03:55`.
 
 ```cron
-0 */2 * * * curl -fsS -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/refresh
-55 3 * * *  curl -fsS -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/refresh
+55 1,3,5,7,9,11,13,15,17,19,21,23 * * * curl -fsS -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/refresh
 ```

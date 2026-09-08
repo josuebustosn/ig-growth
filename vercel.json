@@ -3,11 +3,7 @@
   "crons": [
     {
       "path": "/api/cron/refresh",
-      "schedule": "0 */2 * * *"
-    },
-    {
-      "path": "/api/cron/refresh",
-      "schedule": "55 3 * * *"
+      "schedule": "55 1,3,5,7,9,11,13,15,17,19,21,23 * * *"
     }
   ]
 }

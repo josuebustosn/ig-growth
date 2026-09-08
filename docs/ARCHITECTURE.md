@@ -60,12 +60,15 @@ El canvas de `ShareMetrics` es la excepción: no entiende `color-mix()` ni `var(
 
 ## Los crons
 
-`vercel.json` agenda dos, ambos a `/api/cron/refresh`:
+`vercel.json` agenda **uno**, a `/api/cron/refresh`:
 
-| Schedule (UTC) | Local (UTC-4) | Para qué |
-|---|---|---|
-| `0 */2 * * *` | cada 2 h | Mantener la caché caliente sin depender de visitas |
-| `55 3 * * *` | 23:55 | Caer dentro de la ventana de cierre de día |
+```
+55 1,3,5,7,9,11,13,15,17,19,21,23 * * *
+```
+
+Uno solo y no dos porque **Vercel registra una entrada por path**: dos definiciones apuntando a la misma ruta no corren las dos — `vercel crons ls` las reporta como un único job permanentemente "modified" y la segunda nunca dispara. Es un fallo callado, y el que se perdía era justo el de cierre de día.
+
+Así que un schedule cubre los dos trabajos: doce corridas al día (cada 2 h, a los `:55`) mantienen la caché caliente, y la de las `03:55 UTC` cae en 23:55 hora de Venezuela, dentro de la ventana de cierre de día. Escrito en hora local dispararía a las 19:55 y erraría la ventana sin avisar.
 
 La ruta del cron y la del navegador comparten `refreshAndRecord()`, así que el cron no es una segunda implementación que pueda desviarse de la que usan las personas.
 

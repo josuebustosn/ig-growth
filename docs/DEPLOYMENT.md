@@ -28,9 +28,15 @@ En Vercel → **Add New → Project** → elegí el repo. Framework detectado: N
 
 En el proyecto → pestaña **Storage** → **Create Database** → **Blob**.
 
-🔴 **Creálo PRIVADO, no público.** Las lecturas consistentes no existen en stores públicos, y sin ellas cada ciclo read-modify-write del histórico pierde actualizaciones sin avisar.
+Dos cosas del diálogo, y las dos importan:
 
-Al conectarlo, Vercel inyecta `BLOB_READ_WRITE_TOKEN` sola.
+🔴 **Access: Private**, no Public. Las lecturas consistentes no existen en stores públicos, y sin ellas cada ciclo read-modify-write del histórico pierde actualizaciones sin avisar.
+
+🔴 **Marcá "Add a read-write token env var to this connection".** Viene DESMARCADO. Sin él, Vercel crea solo `BLOB_STORE_ID` y `BLOB_WEBHOOK_PUBLIC_KEY` (autenticación por OIDC), y `lib/storage.ts` decide qué backend usar mirando **`BLOB_READ_WRITE_TOKEN`**: si no existe, cae a disco en silencio. Es el fallo callado de siempre, entrando por un checkbox.
+
+**Región:** elegí la misma donde corren las funciones (por defecto `iad1`), así la escritura no cruza el continente.
+
+Después de crear el store hace falta **redesplegar**: el proyecto tiene que levantar con la variable nueva.
 
 ---
 
@@ -70,7 +76,7 @@ Si vas a usar otra marca, agregá también las variables de `NEXT_PUBLIC_BRAND_*
 
 > Si `BLOB_READ_WRITE_TOKEN` falta, la aplicación **no falla**. El selector cae al backend de disco, responde 200 con toda normalidad, y el histórico se borra en cada cold start sin un solo error en los logs. Meses después te encontrás con un histórico que empieza ayer.
 
-Comprobalo en **Storage → tu store**: después del primer pedido tienen que aparecer `history.json` y `cache.json`.
+Comprobalo en **Storage → tu store → Browser**: después del primer pedido tienen que aparecer `history.json` y `cache.json`. Si el store quedó conectado solo a Production y Preview, desde tu máquina `vercel blob list` va a fallar con *"OIDC is enabled for this project, but not for the development environment"* — no es un problema, simplemente miralo desde el panel.
 
 **b) Que el scrape funcione.** Abrí `https://tu-dominio/api/followers`. Tenés que ver el conteo, el `fullName` y el `profilePicUrl` reales:
 

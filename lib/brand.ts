@@ -13,6 +13,16 @@
 // (Each variable below is referenced as a static `process.env.NEXT_PUBLIC_*`
 // member expression because that is the only form the inliner recognizes.)
 
+// A hex color may be written with or without the leading '#'. That matters because
+// '#' opens a comment in a .env file, so NEXT_PUBLIC_BRAND_SHARE_BG=#0F032D parses
+// as an empty string and the fallback below silently restores the default image —
+// the brand ships with someone else's background and nothing warns about it.
+// Accepting the bare form removes the trap; the quoted form ("#0F032D") still works.
+// Paths are left untouched: they contain '/' and '.', so they never match here.
+function asShareBackground(value: string): string {
+    return /^#?[0-9a-fA-F]{3,8}$/.test(value) ? `#${value.replace(/^#/, '')}` : value;
+}
+
 const name = process.env.NEXT_PUBLIC_BRAND_NAME || 'TrawiStats';
 
 export const brand = {
@@ -48,10 +58,10 @@ export const brand = {
     canvasLogo: process.env.NEXT_PUBLIC_BRAND_CANVAS_LOGO || '/Trawi_Logo_Sinfondo.png',
 
     // Background of the shared image. Two forms:
-    //   - a color ('#0F032D'): painted as a flat fill, with no blur and no darkening
+    //   - a color ('0F032D' or '#0F032D'): painted as a flat fill, with no blur and no darkening
     //     overlay — both exist to make text readable over a photo, and an 80% black
     //     overlay would crush any brand color to near-black.
     //   - an image path ('/Trawayana.png'): drawn oversized, blurred and darkened,
     //     exactly as the share image has always been built.
-    shareBackground: process.env.NEXT_PUBLIC_BRAND_SHARE_BG || '/Trawayana.png',
+    shareBackground: asShareBackground(process.env.NEXT_PUBLIC_BRAND_SHARE_BG || '/Trawayana.png'),
 };

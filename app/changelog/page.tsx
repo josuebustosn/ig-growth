@@ -156,22 +156,6 @@ export default function ChangelogPage() {
                 </div>
             )}
 
-            {/* Easter egg credit */}
-            <div style={{
-                display: 'flex',
-                justifyContent: 'center',
-                marginTop: '3rem',
-                opacity: 0.7
-            }}>
-                <Image
-                    src="/Trawayana.png"
-                    alt="Trawayana"
-                    width={120}
-                    height={120}
-                    style={{ borderRadius: '12px' }}
-                />
-            </div>
-
             <footer style={{ textAlign: 'center', marginTop: '2rem', padding: '1rem', opacity: 0.6 }}>
                 <Link href="/" style={{ color: 'var(--primary)' }}>← Volver al Dashboard</Link>
             </footer>

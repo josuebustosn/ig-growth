@@ -119,7 +119,7 @@ Si el dominio ya está en Vercel, se configura solo.
 Sigue funcionando. Sin `BLOB_READ_WRITE_TOKEN` el storage escribe en `data/*.json`:
 
 ```bash
-git clone <repo> && cd instagram-growth-dashboard
+git clone <repo> && cd ig-growth
 npm install
 cp .env.example .env.local     # APIFY_TOKEN y la cuenta
 npm run build

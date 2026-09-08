@@ -56,8 +56,8 @@ Más detalle en [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 ## Correrlo local
 
 ```bash
-git clone https://github.com/josuebustosn/instagram-growth-dashboard.git
-cd instagram-growth-dashboard
+git clone https://github.com/josuebustosn/ig-growth.git
+cd ig-growth
 npm install
 cp .env.example .env.local     # y pon tu APIFY_TOKEN
 npm run dev

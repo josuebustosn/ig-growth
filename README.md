@@ -1,422 +1,138 @@
-# 📊 TrawiStats
+# Instagram Growth Dashboard
 
-> Dashboard inteligente de analytics para Instagram con proyecciones predictivas y milestones dinámicos.
+Un dashboard para una sola cuenta de Instagram: cuántos seguidores tenés hoy, cuántos ganaste, cuánto te falta para la próxima meta y cuándo vas a llegar. Corre entero en Vercel, sin servidor propio y sin base de datos.
 
-![Version](https://img.shields.io/badge/version-1.3-blue.svg)
-![Next.js](https://img.shields.io/badge/Next.js-16.0-black.svg)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
+Está desplegado como **[stats.piremos.com](https://stats.piremos.com)** para [@piremos.app](https://instagram.com/piremos.app), pero el repo no está atado a esa marca: nombre, logos, dominio, cuenta y **paleta completa** salen de variables de entorno.
 
-**Live Demo:** [stats.trawi.net](https://stats.trawi.net)
+![Dashboard en modo oscuro](docs/img/dashboard-oscuro.png)
 
 ---
 
-## ✨ Características
+## Qué hace
 
-### 📈 Analytics en Tiempo Real
-- **Contador animado** con efecto odómetro
-- **Actualización automática** cada 60 segundos
-- **Timestamp preciso** que muestra tiempo real transcurrido
-- **Badge de cambio diario** con indicador +X hoy
+| | |
+|---|---|
+| **Contador en vivo** | Seguidores actuales con el cambio del día, foto y nombre reales de la cuenta |
+| **Calendario de crecimiento** | Un cuadro por día, navegable por mes, con el neto del período |
+| **Calculadora de CPF** | Metés tu costo por seguidor y te dice cuánto cuesta llegar a 10k, 20k, 50k, 100k, 500k y 1M |
+| **Proyección** | Media móvil exponencial sobre el histórico, con la fecha estimada de la próxima meta |
+| **Imagen para compartir** | Genera un PNG cuadrado con el crecimiento del día, la semana o el mes, listo para publicar |
+| **Claro y oscuro** | Dos temas reales, derivados de la misma paleta |
 
-### 📅 Análisis Histórico
-- **Selector de meses**: Explora tu historial completo mes por mes
-- **Calendario de crecimiento**: Visualización de últimos 30 días o períodos específicos
-- **Total dinámico**: Indicadores que se ajustan al período seleccionado
-- **Hover effects**: Detalles interactivos en cada día
-
-### 🎯 Sistema de Milestones Dinámicos
-- **6 niveles de objetivos**: 10k, 20k, 50k, 100k, 500k, 1M
-- **Auto-completado inteligente**: Se marcan con ✓ al alcanzarlos
-- **Fechas de logros**: Historial de cuándo alcanzaste cada milestone
-- **Formato legible**: Números simplificados (10k, 1M)
-
-### 🧠 Proyección Inteligente
-- **Algoritmo EMA** (Exponential Moving Average) con análisis de tendencias
-- **Detección adaptativa**: Reconoce aceleración/desaceleración del crecimiento
-- **Gráfico dinámico**: Se ajusta automáticamente al siguiente milestone
-- **Predicciones precisas**: Fecha estimada para alcanzar objetivos
-- **Referencias visuales**: Milestones completados vs pendientes
-
-### 💰 Calculadora de Inversión
-- **Costo por seguidor (CPF)**: Calcula inversión necesaria para objetivos
-- **Milestones predefinidos**: Costo directo para cada nivel
-- **Actualización en tiempo real**: Ajusta según tu CPF actual
-
-### 📤 Compartir Logros
-- **Generador de imágenes**: Crea graphics profesionales de tus métricas
-- **3 períodos**: Hoy, Semana, 30 días
-- **Múltiples formatos**: Copiar al portapapeles o descargar como PNG
-- **Compatible mobile**: Web Share API integrada
-
-### 🎨 Experiencia de Usuario
-- **Modo oscuro/claro**: Tema adaptable
-- **Diseño responsive**: Optimizado para mobile, tablet y desktop
-- **Animaciones suaves**: Transiciones y efectos glassmorphism
-- **Easter egg musical**: Canciones de Rawi rotando diariamente 🎵
+<table>
+<tr>
+<td width="50%"><img src="docs/img/dashboard-claro.png" alt="Modo claro"></td>
+<td width="50%"><img src="docs/img/imagen-compartida.png" alt="Imagen generada para compartir"></td>
+</tr>
+<tr>
+<td align="center"><em>Modo claro</em></td>
+<td align="center"><em>La imagen que genera para redes</em></td>
+</tr>
+</table>
 
 ---
 
-## 🚀 Tech Stack
+## Cómo funciona
 
-### Frontend
-- **Next.js 16** - React framework con App Router
-- **TypeScript** - Type safety y mejor DX
-- **Recharts** - Gráficos y visualizaciones
-- **CSS Modules** - Estilos scoped
+```
+Vercel Cron ──┐
+              ├──▶  /api/followers  ──▶  caché (TTL 2 h)  ──▶  Apify Actor  ──▶  Instagram
+Navegador  ───┘            │
+                           └──▶  Vercel Blob  ──▶  history.json · cache.json
+```
 
-### Backend
-- **Next.js API Routes** - Serverless functions
-- **Apify Client** - Web scraping de Instagram
-- **Node.js** - Runtime environment
+**El scraping** lo hace un Actor de Apify, invocado desde TypeScript con `apify-client`. Cuesta unos **$0,0036 por corrida**; con caché de 2 horas son ~$1,30 al mes.
 
-### Data & Storage
-- **JSON files** - Sistema de caché y historial
-- **File System API** - Persistencia local
-- **Cron Jobs** - Actualizaciones automáticas cada 2 horas
+**La caché** evita pagar por cada visita. Un pedido dentro de la ventana de 2 horas se sirve de lo guardado sin tocar Apify. Si el scrape falla y hay algo en caché, se devuelve el valor viejo con un backoff de 15 minutos en vez de un error.
 
-### DevOps
-- **PM2** - Process manager
-- **Nginx** - Reverse proxy
-- **Let's Encrypt** - SSL/HTTPS
-- **DigitalOcean** - Hosting VPS
+**El histórico** es acumulativo y no se reconstruye: si falta un día, falta para siempre. Por eso hay dos crons — uno cada 2 horas y otro a las **23:55 hora de Venezuela**, para registrar el número con el que cierra el día aunque nadie abra la página.
+
+**La persistencia** elige backend sola: con `BLOB_READ_WRITE_TOKEN` escribe en Vercel Blob, sin ella en `data/*.json` en disco. El mismo código corre en Vercel y en un VPS.
+
+Más detalle en [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ---
 
-## 📦 Instalación
-
-### Requisitos Previos
-- Node.js 18+ 
-- npm o yarn
-- Token de Apify API
-
-### Setup Local
+## Correrlo local
 
 ```bash
-# 1. Clonar el repositorio
 git clone https://github.com/josuebustosn/trawi-stats.git
 cd trawi-stats
-
-# 2. Instalar dependencias
 npm install
-
-# 3. Crear archivo de configuración
-cp .env.example .env.local
-
-# 4. Configurar variables de entorno
-# Editar .env.local con tu token de Apify y usuario de Instagram:
-# APIFY_TOKEN=tu_token_aqui
-# NEXT_PUBLIC_INSTAGRAM_USERNAME=tu_usuario
-
-# 5. Correr en desarrollo
+cp .env.example .env.local     # y poné tu APIFY_TOKEN
 npm run dev
-
-# 6. Abrir en navegador
-# http://localhost:3000
 ```
 
-### Variables de Entorno
-
-Crear archivo `.env.local` en la raíz (ver `.env.example`):
-
-```env
-APIFY_TOKEN=tu_token_de_apify_aqui
-NEXT_PUBLIC_INSTAGRAM_USERNAME=tu_usuario_de_instagram
-
-# Opcional: segundos a esperar a que termine el run de Apify (default: 50).
-# Ajustalo al limite de duracion de tu plan de hosting.
-APIFY_WAIT_SECS=50
-```
+Sin `BLOB_READ_WRITE_TOKEN` guarda en `data/`, que está ignorado por git. Con solo el token de Apify configurado ya funciona: el resto tiene valores por defecto.
 
 ---
 
-## 🏗️ Estructura del Proyecto
+## Usarlo con tu marca
 
-```
-trawi-stats/
-├── app/
-│   ├── api/
-│   │   └── followers/
-│   │       └── route.ts          # API endpoint principal
-│   ├── changelog/
-│   │   └── page.tsx              # Página de changelog
-│   ├── layout.tsx                # Layout principal
-│   ├── page.tsx                  # Homepage
-│   └── globals.css               # Estilos globales
-├── components/
-│   ├── Calculators.tsx           # Calculadora de CPF
-│   ├── FollowerCounter.tsx       # Contador animado
-│   ├── GrowthCalendar.tsx        # Calendario con selector de meses
-│   ├── MusicPlayer.tsx           # Easter egg musical
-│   ├── ProjectionChart.tsx       # Gráfico de proyección inteligente
-│   ├── ShareMetrics.tsx          # Generador de imágenes
-│   └── ThemeToggle.tsx           # Switcher de tema
-├── lib/
-│   ├── instagram-service.ts      # Servicio de Instagram
-│   └── storage.ts                # Sistema de caché
-├── public/
-│   ├── changelog.json            # Historial de versiones
-│   └── ...                       # Assets estáticos
-├── data/                         # Datos persistentes
-│   ├── history.json              # Historial de seguidores
-│   └── cache.json                # Caché de datos
-└── docs/                         # Documentación
-    ├── ARCHITECTURE.md
-    ├── DEPLOYMENT.md
-    └── ROADMAP.md
-```
-
----
-
-## 🔧 Configuración
-
-### Actualización Automática
-
-El sistema usa caché de 2 horas + sync automático a las 23:50 (hora Venezuela) para cierre diario.
-
-### Cron Jobs (Producción)
+No hace falta tocar código. Poné tus archivos en `public/` y configurá estas variables:
 
 ```bash
-# Actualizar cada 2 horas
-0 */2 * * * cd /path/to/project && curl http://localhost:3000/api/followers?username=trawi.viajes
+NEXT_PUBLIC_BRAND_NAME=TuMarca
+NEXT_PUBLIC_INSTAGRAM_USERNAME=tucuenta
+NEXT_PUBLIC_SHARE_DOMAIN=stats.tumarca.com
+
+NEXT_PUBLIC_BRAND_HEADER_LOGO=/tu-logo.png
+NEXT_PUBLIC_BRAND_FAVICON=/tu-icono.svg
+NEXT_PUBLIC_BRAND_CANVAS_LOGO=/tu-logo-blanco.png
+
+# Toda la interfaz se deriva de estos seis
+NEXT_PUBLIC_BRAND_PRIMARY=4E2BCC
+NEXT_PUBLIC_BRAND_ACCENT=9471FF
+NEXT_PUBLIC_BRAND_POSITIVE=C4F333
+NEXT_PUBLIC_BRAND_NEGATIVE=FF6B6B
+NEXT_PUBLIC_BRAND_DARK=0F032D
+NEXT_PUBLIC_BRAND_LIGHT=EFEFEF
 ```
 
-### PM2 (Producción)
+Los seis colores se entregan a CSS una vez, en `app/layout.tsx`, y `globals.css` deriva de ahí cada sombra, borde, tinte y estado con `color-mix()`. **Ningún componente contiene un color literal**, así que una marca nueva son seis valores y tus logos — no una pasada por cada archivo.
 
-```bash
-# Iniciar con PM2
-pm2 start npm --name "trawistats" -- start
+Los dos temas tratan esos colores distinto, y tiene que ser así: el púrpura `#4E2BCC` sobre el fondo oscuro da ~1,6:1 y no se lee, así que el modo oscuro lo aclara hacia el color claro hasta pasar AA. El lime `#C4F333` es el caso opuesto —brillante sobre oscuro, invisible sobre claro—, así que el modo claro lo oscurece. Eso se deriva, no se lista, para que funcione con cualquier paleta y no solo con esta.
 
-# Configurar límite de memoria
-pm2 start npm --name "trawistats" -- start --max-memory-restart 150M
+> **Los colores se aceptan con o sin `#`.** En un archivo `.env` el `#` abre un comentario, así que `NEXT_PUBLIC_BRAND_PRIMARY=#4E2BCC` llegaría vacío y caería al valor por defecto sin avisar. Se acepta la forma pelada para que no haya trampa.
 
-# Guardar configuración
-pm2 save
-
-# Startup script
-pm2 startup
-```
+> ⚠️ Todas las `NEXT_PUBLIC_*` se **inlinean en tiempo de build**. Configuralas antes del primer deploy; cambiar una después exige redeploy, no alcanza con editarla en el panel.
 
 ---
 
-## 📊 Uso
+## Desplegarlo
 
-### Dashboard Principal
+Guía completa en [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md). El resumen:
 
-1. **Contador en Tiempo Real**
-   - Muestra followers actuales
-   - Badge con cambio del día (+X hoy)
-   - Timestamp de última actualización
+1. Importá el repo en Vercel
+2. Creá un Blob store **privado** y conectalo al proyecto
+3. Cargá `APIFY_TOKEN`, `NEXT_PUBLIC_INSTAGRAM_USERNAME` y `CRON_SECRET`
+4. Deploy — los crons de `vercel.json` se activan solos
+5. **Verificá que `BLOB_READ_WRITE_TOKEN` esté puesta**
 
-2. **Calendario de Crecimiento**
-   - Selector: "Últimos 30 días" o meses específicos
-   - Total dinámico según período
-   - Cada día muestra cambio (+X / -X)
-
-3. **Calculadora de Inversión**
-   - Ingresa tu CPF (Costo Por Seguidor)
-   - Ve costos para cada milestone
-   - Milestones completados marcados con ✓
-
-4. **Proyección de Crecimiento**
-   - Gráfico con datos históricos
-   - Proyección hasta siguiente milestone
-   - Badges de milestones completados con fechas
-   - Simulador de crecimiento manual
-
-5. **Compartir Logros**
-   - Selecciona período: Hoy / Semana / 30d
-   - Genera imagen profesional
-   - Copia o descarga
-
-### API Endpoints
-
-```typescript
-// GET /api/followers?username=trawi.viajes
-{
-  profile: {
-    followers: 15318,
-    profilePicUrl: string
-  },
-  history: [
-    { date: "2026-01-31", followers: 15318, change: -2 },
-    ...
-  ],
-  lastUpdated: 1738355400000
-}
-```
+El paso 5 no es burocracia: si esa variable falta, la app **no falla**. Cae al backend de disco, responde 200 con toda normalidad, y el histórico se borra en cada cold start sin un solo error en los logs.
 
 ---
 
-## 🎨 Personalización
+## Stack
 
-### Cambiar Usuario de Instagram
+Next.js 16 (App Router) · React 19 · TypeScript · Recharts · Vercel Blob · Apify
 
-Editar la variable de entorno en `.env.local`:
-
-```env
-NEXT_PUBLIC_INSTAGRAM_USERNAME=tu_usuario_aqui
-```
-
-### Ajustar Milestones
-
-Editar `components/Calculators.tsx` y `components/ProjectionChart.tsx`:
-
-```typescript
-const milestones = [10000, 20000, 50000, 100000, 500000, 1000000];
-```
-
-### Modificar Colores
-
-Editar `app/globals.css`:
-
-```css
-:root {
-  --primary: #3291ff;
-  --accent: #d946ef;
-  --success: #10b981;
-  --danger: #ef4444;
-}
-```
+Sin base de datos y sin dependencias de UI: los estilos son CSS plano con custom properties, y los componentes están escritos a mano.
 
 ---
 
-## 🚀 Deploy
+## Decisiones que quizás llamen la atención
 
-### Opción 1: VPS (Recomendado)
+**La ruta ignora el query string.** `/api/followers` no recibe la cuenta por parámetro: la lee del entorno. Antes venía de `?username=`, lo que significaba que cualquiera podía hacer que este despliegue scrapeara la cuenta que quisiera — cada una facturada a nuestro crédito de Apify, y agregada para siempre a un `history.json` compartido. Con la cuenta fija no hace falta rate limiting.
 
-**DigitalOcean / Railway / Linode**
+**El histórico usa compare-and-swap, la caché no.** Cada escritura reemplaza el documento entero, así que una actualización perdida en `history.json` se llevaría entradas de otros días. La caché va last-write-wins a propósito: es reconstruible, y perder una escritura cuesta un scrape, no un registro.
 
-1. Crear servidor Ubuntu 22.04
-2. Instalar Node.js 18+
-3. Clonar repositorio
-4. Configurar `.env.local` con `APIFY_TOKEN`
-5. Instalar dependencias
-6. Usar PM2 para mantener app corriendo
-7. Configurar Nginx como reverse proxy
-8. SSL con Let's Encrypt
+**Un documento ilegible se trata distinto según cuál sea.** Si `history.json` existe pero no parsea, se lanza y no se toca: es el único registro que no se puede rehacer. Si es `cache.json`, se sigue como si estuviera vacío: una caché ilegible es un cache miss.
 
-Ver [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) para guía completa.
-
-### Opción 2: Vercel (Limitado)
-
-⚠️ **No recomendado** porque:
-- Archivos JSON no persisten entre deploys
-- Necesitas base de datos externa
+**Los crons van en UTC.** Venezuela es UTC-4, así que el cierre de día está agendado a las `03:55 UTC`. Escrito como `23:55` dispararía a las 19:55 locales y erraría la ventana en silencio.
 
 ---
 
-## 📝 Changelog
+## Licencia
 
-### v1.3 (2026-02-01) - Milestones Dinámicos y Proyección Inteligente
-
-**✨ Features:**
-- Selector de meses en calendario histórico
-- Sistema de 6 milestones dinámicos (10k → 1M)
-- Proyección inteligente con algoritmo EMA
-- Gráfico adaptativo al siguiente milestone
-- Badges de milestones completados con fechas
-
-**🔧 Fixes:**
-- Timestamp "Actualizado hace..." ahora funcional
-- Actualización cada 10s (antes 60s)
-
-**🗑️ Deprecated:**
-- Eliminada Calculadora de CPF Diario
-
-Ver [public/changelog.json](public/changelog.json) para historial completo.
-
----
-
-## 🤝 Contribuir
-
-1. Fork el proyecto
-2. Crea tu feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'feat: Add AmazingFeature'`)
-4. Push a la branch (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
-
-### Convenciones de Commits
-
-```
-feat: Nueva funcionalidad
-fix: Corrección de bug
-docs: Cambios en documentación
-style: Cambios de formato
-refactor: Refactorización de código
-test: Agregar tests
-chore: Tareas de mantenimiento
-```
-
----
-
-## 🐛 Troubleshooting
-
-### Error: "APIFY_TOKEN not set"
-- Verifica que `.env.local` existe
-- Confirma que el token es correcto
-- Reinicia el servidor
-
-### Error: "Cannot find module 'apify-client'"
-```bash
-npm install
-```
-
-### Cache no actualiza
-- Elimina `data/cache.json`
-- Reinicia servidor
-- Verifica cron jobs
-
-### Puerto 3000 ocupado
-```bash
-# Cambiar puerto
-PORT=3001 npm run dev
-```
-
----
-
-## 📚 Documentación Adicional
-
-- [Arquitectura del Proyecto](docs/ARCHITECTURE.md)
-- [Guía de Deployment](docs/DEPLOYMENT.md)
-- [Roadmap](docs/ROADMAP.md)
-- [Sistema de Changelog](docs/CHANGELOG_SYSTEM.md)
-
----
-
-## 📄 Licencia
-
-Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para detalles.
-
----
-
-## 👥 Autor
-
-**Josue Bustos** - [@trawi.viajes](https://instagram.com/trawi.viajes)
-
----
-
-## 🙏 Agradecimientos
-
-- [Next.js](https://nextjs.org/) - Framework React
-- [Recharts](https://recharts.org/) - Librería de gráficos
-- [Apify](https://apify.com/) - Web scraping platform
-- Comunidad de [Trawi Viajes](https://instagram.com/trawi.viajes)
-
----
-
-## 🔗 Links
-
-- **Website:** [stats.trawi.net](https://stats.trawi.net)
-- **Instagram:** [@trawi.viajes](https://instagram.com/trawi.viajes)
-- **Repository:** [github.com/josuebustosn/trawi-stats](https://github.com/josuebustosn/trawi-stats)
-
----
-
-<div align="center">
-  
-**Hecho con ❤️ por el equipo de Trawi**
-
-⭐ Si te gustó este proyecto, deja una estrella en GitHub!
-
-</div>
+MIT — ver [LICENSE](LICENSE).

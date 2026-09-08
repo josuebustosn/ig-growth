@@ -1,31 +1,78 @@
+/*
+ * The six --brand-* variables are injected by app/layout.tsx from lib/brand.ts,
+ * which reads them from the environment. Everything below is DERIVED from those
+ * six with color-mix(), so re-skinning the dashboard for another brand is six
+ * environment variables and a logo — not a pass through every component.
+ *
+ * Why derive instead of listing every shade: the two themes need different
+ * treatments of the same brand color. Purple #4E2BCC is the brand primary, but
+ * on the dark sapphire background it sits at ~1.6:1 and is unreadable, so dark
+ * mode mixes it toward the light color until it clears AA. Lime #C4F333 is the
+ * opposite: brilliant on dark, invisible on light, so light mode mixes it toward
+ * the dark color. Hand-listing those pairs would bake Piremos' specific hues in.
+ */
+
 :root {
-  /* Light Mode — soft dark, easy on the eyes */
-  --background: #1e1e2e;
-  --foreground: #cdd6f4;
-  --card-bg: rgba(30, 30, 50, 0.6);
-  --card-border: rgba(255, 255, 255, 0.08);
-  --primary: #89b4fa;
-  --accent: #cba6f7;
-  --success: #a6e3a1;
-  --danger: #f38ba8;
-  --text-muted: #7f849c;
-  --glass-border: 1px solid rgba(255, 255, 255, 0.06);
-  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
+  /* ── Light theme ─────────────────────────────────────────────────────── */
+  --background: var(--brand-light);
+  --surface: color-mix(in srgb, var(--brand-light) 45%, #ffffff);
+  --foreground: var(--brand-dark);
+
+  --card-bg: color-mix(in srgb, #ffffff 82%, transparent);
+  --card-border: color-mix(in srgb, var(--brand-dark) 10%, transparent);
+
+  --primary: var(--brand-primary);
+  --accent: color-mix(in srgb, var(--brand-accent) 70%, var(--brand-dark));
+
+  /* Lime is unreadable on a light surface; pull it toward the dark brand color
+   * until it passes AA as text. 40/60 measures ~7:1 on Blanco Humo. */
+  --success: color-mix(in srgb, var(--brand-positive) 38%, var(--brand-dark));
+  --danger: color-mix(in srgb, var(--brand-negative) 62%, var(--brand-dark));
+
+  /* Alpha, not a fixed grey: the same token stays legible on the page background
+   * and on a raised card without being compensated per surface. */
+  --text-muted: color-mix(in srgb, var(--brand-dark) 58%, transparent);
+  --text-faint: color-mix(in srgb, var(--brand-dark) 40%, transparent);
+
+  --tint: color-mix(in srgb, var(--brand-primary) 8%, transparent);
+  --glass-border: 1px solid color-mix(in srgb, var(--brand-dark) 8%, transparent);
+  --glass-shadow: 0 4px 24px color-mix(in srgb, var(--brand-dark) 8%, transparent);
+  --ring: color-mix(in srgb, var(--brand-primary) 35%, transparent);
+
+  /* Inputs, meters, track backgrounds. These were rgba(0,0,0,0.2) — fine on a
+   * dark page, a muddy grey slab on a light one. As a share of the foreground
+   * they stay a hint of contrast against whatever the surface happens to be. */
+  --control-bg: color-mix(in srgb, var(--foreground) 5%, transparent);
+  --control-border: color-mix(in srgb, var(--foreground) 14%, transparent);
 }
 
 [data-theme='dark'] {
-  /* Dark Mode */
-  --background: #0a0a0a;
-  --foreground: #ededed;
-  --card-bg: rgba(20, 20, 20, 0.6);
-  --card-border: rgba(255, 255, 255, 0.1);
-  --primary: #3291ff;
-  --accent: #d946ef;
-  --success: #34d399;
-  --danger: #f87171;
-  --text-muted: #a1a1a1;
-  --glass-border: 1px solid rgba(255, 255, 255, 0.05);
-  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  /* ── Dark theme ──────────────────────────────────────────────────────── */
+  --background: var(--brand-dark);
+  --surface: color-mix(in srgb, var(--brand-light) 4%, var(--brand-dark));
+  --foreground: var(--brand-light);
+
+  --card-bg: color-mix(in srgb, var(--brand-light) 6%, transparent);
+  --card-border: color-mix(in srgb, var(--brand-light) 12%, transparent);
+
+  /* The brand primary is too dark to read on its own dark background; lift it
+   * toward the light color. Works for any brand, not just this one. */
+  --primary: color-mix(in srgb, var(--brand-primary) 45%, var(--brand-light));
+  --accent: var(--brand-accent);
+
+  --success: var(--brand-positive);
+  --danger: var(--brand-negative);
+
+  --text-muted: color-mix(in srgb, var(--brand-light) 55%, transparent);
+  --text-faint: color-mix(in srgb, var(--brand-light) 35%, transparent);
+
+  --tint: color-mix(in srgb, var(--brand-accent) 12%, transparent);
+  --glass-border: 1px solid color-mix(in srgb, var(--brand-light) 8%, transparent);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  --ring: color-mix(in srgb, var(--brand-accent) 45%, transparent);
+
+  --control-bg: color-mix(in srgb, var(--foreground) 8%, transparent);
+  --control-border: color-mix(in srgb, var(--foreground) 16%, transparent);
 }
 
 * {
@@ -43,15 +90,35 @@ body {
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
-    Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
+  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    Roboto, Helvetica, Arial, sans-serif;
   transition: background-color 0.3s ease, color 0.3s ease;
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* A wash of brand color behind the page, so the background is not a flat slab. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(60rem 40rem at 15% -10%, var(--tint), transparent 65%),
+    radial-gradient(50rem 35rem at 95% 5%, var(--tint), transparent 60%);
 }
 
 a {
   color: inherit;
   text-decoration: none;
+}
+
+/* Numbers that change should not make the layout jitter. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
 }
 
 /* Utilities */
@@ -60,14 +127,26 @@ a {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: var(--glass-border);
-  border-radius: 16px;
+  border-radius: 18px;
   box-shadow: var(--glass-shadow);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.glass-panel:hover {
+  box-shadow: 0 12px 40px color-mix(in srgb, var(--brand-dark) 14%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 28%, transparent);
 }
 
 .container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem;
+}
+
+@media (max-width: 640px) {
+  .container {
+    padding: 1.25rem 1rem 2.5rem;
+  }
 }
 
 .grid {
@@ -82,9 +161,18 @@ a {
 }
 
 .text-gradient {
-  background: linear-gradient(to right, var(--primary), var(--accent));
+  background: linear-gradient(110deg, var(--primary), var(--accent));
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* Keyboard focus has to be visible; the default outline disappears on dark. */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 6px;
 }
 
 /* Hide number input spinners */
@@ -111,7 +199,7 @@ input[type=number] {
 
 /* Fixed height for follower counter to prevent layout shift */
 .follower-counter-box {
-  height: 240px;
+  min-height: 320px;
 }
 
 /* Dropdown animation */
@@ -120,6 +208,7 @@ input[type=number] {
     opacity: 0;
     transform: translateY(-8px) scale(0.96);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -128,8 +217,13 @@ input[type=number] {
 
 /* Fade in for content after skeleton */
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .fade-in {
@@ -142,6 +236,7 @@ input[type=number] {
     opacity: 0;
     transform: translateY(16px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -154,6 +249,7 @@ input[type=number] {
     opacity: 0;
     transform: scale(0.8);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -163,20 +259,24 @@ input[type=number] {
 /* Hover effects for calendar days */
 .calendar-day:hover {
   transform: scale(1.08);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--brand-dark) 18%, transparent);
   z-index: 1;
-}
-
-/* Glass panel hover (subtle) */
-.glass-panel {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.glass-panel:hover {
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
 }
 
 /* Logo hover effect */
 .logo-hover:hover {
   transform: scale(1.05);
+}
+
+/* Respect the OS setting: no motion means no motion. */
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

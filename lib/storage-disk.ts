@@ -15,13 +15,33 @@ interface HistoryData {
     [username: string]: DailyStats[];
 }
 
+/**
+ * What we keep about a profile between scrapes.
+ *
+ * Everything past `followers` is optional because entries written before these
+ * fields existed are still valid cache: an old document must not become a cache
+ * miss (that costs a paid scrape) just because it lacks a display name.
+ */
+export interface CachedProfile {
+    followers: number;
+    following?: number;
+    fullName?: string;
+    profilePicUrl?: string;
+    lastUpdated: number;
+    expiresAt: number;
+    lastEndOfDaySync?: string; // YYYY-MM-DD
+}
+
+/** The fields a scrape contributes; the timestamps are added on write. */
+export interface ProfileSnapshot {
+    followers: number;
+    following?: number;
+    fullName?: string;
+    profilePicUrl?: string;
+}
+
 interface CacheData {
-    [username: string]: {
-        followers: number;
-        lastUpdated: number;
-        expiresAt: number;
-        lastEndOfDaySync?: string; // YYYY-MM-DD
-    }
+    [username: string]: CachedProfile;
 }
 
 function ensureDataDir() {
@@ -91,6 +111,7 @@ export function saveDailyStats(username: string, followers: number): DailyStats[
 // Cache Logic
 
 function getCacheData(): CacheData {
+    ensureDataDir();
     if (!fs.existsSync(CACHE_FILE)) {
         return {};
     }
@@ -102,20 +123,27 @@ function getCacheData(): CacheData {
     }
 }
 
-export function getCachedProfile(username: string): { followers: number, lastUpdated: number, expiresAt: number, lastEndOfDaySync?: string } | null {
+export function getCachedProfile(username: string): CachedProfile | null {
     const cache = getCacheData();
     return cache[username] || null;
 }
 
-export function saveCachedProfile(username: string, followers: number, isEndOfDaySync: boolean = false, ttl: number = 2 * 60 * 60 * 1000) {
+export function saveCachedProfile(username: string, snapshot: ProfileSnapshot, isEndOfDaySync: boolean = false, ttl: number = 2 * 60 * 60 * 1000) {
+    ensureDataDir();
     const cache = getCacheData();
 
     const expiresAt = Date.now() + ttl;
 
-    const existingData = cache[username] || {};
+    const existingData = cache[username] || ({} as CachedProfile);
 
     cache[username] = {
-        followers,
+        followers: snapshot.followers,
+        // The error path re-saves a stale entry to back off, and it only knows the
+        // follower count. Keeping the previous name and picture means a backoff
+        // does not blank out the header.
+        following: snapshot.following ?? existingData.following,
+        fullName: snapshot.fullName ?? existingData.fullName,
+        profilePicUrl: snapshot.profilePicUrl ?? existingData.profilePicUrl,
         lastUpdated: Date.now(),
         expiresAt,
         lastEndOfDaySync: isEndOfDaySync ? new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' }) : existingData.lastEndOfDaySync

@@ -1,366 +1,128 @@
-# Deployment a DigitalOcean - Guía Paso a Paso
+# Desplegar en Vercel
 
-Esta guía te llevará desde cero hasta tener TrawiStats corriendo en tu propio dominio.
+De cero a un dominio propio. Toma unos quince minutos, casi todo esperando builds.
 
----
-
-## Paso 1: Crear el Droplet
-
-1. En DigitalOcean, crea un nuevo Droplet:
-   - **Imagen**: Ubuntu 22.04 LTS
-   - **Plan**: Basic ($6/mes es suficiente)
-   - **Región**: New York o la más cercana a Venezuela
-   - **Autenticación**: SSH Key (recomendado) o Password
-
-2. Anota la IP pública del droplet (ej: `164.90.xxx.xxx`)
+Hace falta: una cuenta de Vercel, una cuenta de [Apify](https://console.apify.com) y el repo importado en GitHub.
 
 ---
 
-## Paso 2: Conectarse al Servidor
+## 1. El token de Apify
+
+En [console.apify.com](https://console.apify.com) → **Settings → API & Integrations** → copiá el *Personal API token*.
+
+El Actor que se usa es `apify/instagram-followers-count-scraper`, que es pay-per-event: **$0,001 por arranque de corrida + $0,0026 por perfil**, o sea **$0,0036 por corrida**. Con los crons de este repo (cada 2 h más el de cierre de día) son unas **13 corridas al día ≈ $1,40 al mes**, dentro de los $5 mensuales del plan gratuito.
+
+> Al agotarse el crédito, una cuenta free queda bloqueada hasta el siguiente ciclo. El dashboard no se cae: sirve el último valor de la caché.
+
+---
+
+## 2. Importar el proyecto
+
+En Vercel → **Add New → Project** → elegí el repo. Framework detectado: Next.js. No cambies nada del build.
+
+**No hagas deploy todavía**: primero las variables, porque las `NEXT_PUBLIC_*` se inlinean en tiempo de build y un deploy sin ellas queda con los valores por defecto hasta que lo repitas.
+
+---
+
+## 3. El Blob store
+
+En el proyecto → pestaña **Storage** → **Create Database** → **Blob**.
+
+🔴 **Creálo PRIVADO, no público.** Las lecturas consistentes no existen en stores públicos, y sin ellas cada ciclo read-modify-write del histórico pierde actualizaciones sin avisar.
+
+Al conectarlo, Vercel inyecta `BLOB_READ_WRITE_TOKEN` sola.
+
+---
+
+## 4. Las variables
+
+**Settings → Environment Variables.** Marcá las tres: Production, Preview y Development.
+
+| Variable | Valor | Obligatoria |
+|---|---|---|
+| `APIFY_TOKEN` | el del paso 1 | sí |
+| `NEXT_PUBLIC_INSTAGRAM_USERNAME` | la cuenta a monitorear, sin `@` | sí |
+| `BLOB_READ_WRITE_TOKEN` | la inyecta el paso 3 | sí en Vercel |
+| `CRON_SECRET` | una cadena aleatoria larga | recomendada |
+| `APIFY_WAIT_SECS` | por debajo del límite de duración de tu plan | no (default 50) |
+
+Para `CRON_SECRET` sirve cualquier cosa impredecible:
 
 ```bash
-ssh root@164.90.xxx.xxx
+openssl rand -hex 32
+```
+
+Vercel manda ese valor como `Authorization: Bearer <secreto>` en cada disparo del cron, y la ruta rechaza todo lo demás. Sin la variable el endpoint queda abierto — sobrevivible, porque la cuenta es fija y el TTL acota el gasto, pero no hay razón para dejarlo así.
+
+Si vas a usar otra marca, agregá también las variables de `NEXT_PUBLIC_BRAND_*` (ver [`.env.example`](../.env.example)).
+
+---
+
+## 5. Deploy
+
+**Deployments → Deploy.** Los dos crons de `vercel.json` se registran solos; los ves en **Settings → Cron Jobs**.
+
+---
+
+## 6. Verificar (el paso que no se salta)
+
+**a) Que el Blob esté realmente conectado.** Este es el importante:
+
+> Si `BLOB_READ_WRITE_TOKEN` falta, la aplicación **no falla**. El selector cae al backend de disco, responde 200 con toda normalidad, y el histórico se borra en cada cold start sin un solo error en los logs. Meses después te encontrás con un histórico que empieza ayer.
+
+Comprobalo en **Storage → tu store**: después del primer pedido tienen que aparecer `history.json` y `cache.json`.
+
+**b) Que el scrape funcione.** Abrí `https://tu-dominio/api/followers`. Tenés que ver el conteo, el `fullName` y el `profilePicUrl` reales:
+
+```json
+{"profile":{"username":"...","followers":4232,"following":15,"fullName":"...","profilePicUrl":"https://..."}, ...}
+```
+
+**c) Que el cron corra más de una vez.** En **Settings → Cron Jobs** mirá la última ejecución, y volvé a mirar dos horas después. Un cron que corre una sola vez y no vuelve a correr es un fallo silencioso clásico: nada se rompe, simplemente el histórico deja de llenarse.
+
+Para forzar uno sin esperar:
+
+```bash
+curl -H "Authorization: Bearer $CRON_SECRET" https://tu-dominio/api/cron/refresh
 ```
 
 ---
 
-## Paso 3: Instalación Inicial
+## 7. El dominio
 
-### 3.1 Actualizar el sistema
-```bash
-apt update && apt upgrade -y
-```
+**Settings → Domains → Add.** Poné el subdominio (`stats.tudominio.com`) y cargá el `CNAME` que te muestra Vercel en tu proveedor de DNS.
 
-### 3.2 Instalar Node.js 18
-```bash
-curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
-apt install -y nodejs
-node -v  # Verificar (debe mostrar v18.x.x)
-```
-
-### 3.3 Instalar Git
-```bash
-apt install -y git
-```
+Si el dominio ya está en Vercel, se configura solo.
 
 ---
 
-## Paso 4: Clonar el Proyecto
+## Operación
 
-```bash
-cd /var/www
-git clone https://github.com/TU_USUARIO/TrawiStats.git trawistats
-cd trawistats
-```
+**Ver logs:** pestaña **Logs** del proyecto, filtrando por `/api/`. Los prefijos son `[instagram]`, `[cron]` y `[Blob]`.
 
-*(Si el repo es privado, necesitarás configurar SSH keys o usar HTTPS con token)*
+**Cambiar de cuenta de Instagram:** editá `NEXT_PUBLIC_INSTAGRAM_USERNAME` y **redesplegá** — es una `NEXT_PUBLIC_`, no se lee en runtime. El histórico se guarda por username, así que la cuenta anterior queda intacta en el documento.
+
+**Respaldar el histórico:** descargá `history.json` desde el panel del Blob store. Es todo el estado que no se puede reconstruir; la caché se rehace sola.
+
+**Si el conteo se congela:** casi siempre es crédito de Apify agotado. El dashboard sigue sirviendo el último valor bueno con backoff de 15 minutos, y los logs muestran el error real de `[instagram]`.
 
 ---
 
-## Paso 5: Configurar el Proyecto
+## Correrlo en un VPS
 
-### 5.1 Instalar dependencias
+Sigue funcionando. Sin `BLOB_READ_WRITE_TOKEN` el storage escribe en `data/*.json`:
+
 ```bash
+git clone <repo> && cd instagram-growth-dashboard
 npm install
-```
-
-### 5.2 Crear archivo de variables de entorno
-```bash
-nano .env.local
-```
-
-Pega esto (reemplaza con tus valores reales):
-```env
-APIFY_TOKEN=tu_token_de_apify_aqui
-NEXT_PUBLIC_INSTAGRAM_USERNAME=tu_usuario_de_instagram
-
-# Opcional: segundos a esperar a que termine el run de Apify (default: 50).
-APIFY_WAIT_SECS=50
-```
-
-Guarda con `Ctrl+O`, `Enter`, `Ctrl+X`
-
-### 5.3 Build del proyecto
-```bash
+cp .env.example .env.local     # APIFY_TOKEN y la cuenta
 npm run build
+pm2 start npm --name stats -- start
 ```
 
----
+Ahí no hay Vercel Cron, así que el refresco queda a cargo de crontab. Ojo con la zona horaria: si el servidor está en UTC, el cierre de día de Venezuela son las `03:55`.
 
-## Paso 6: Instalar PM2 (Gestor de Procesos)
-
-PM2 mantendrá tu app corriendo 24/7, incluso si el servidor se reinicia.
-
-```bash
-npm install -g pm2
+```cron
+0 */2 * * * curl -fsS -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/refresh
+55 3 * * *  curl -fsS -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/refresh
 ```
-
-### Iniciar la aplicación
-```bash
-pm2 start npm --name "trawistats" -- start
-```
-
-### Configurar auto-inicio
-```bash
-pm2 startup
-# Copia y ejecuta el comando que te muestra
-pm2 save
-```
-
-### Verificar que esté corriendo
-```bash
-pm2 status
-```
-
-Deberías ver:
-```
-┌─────┬──────────────┬─────────┬─────────┐
-│ id  │ name         │ status  │ restart │
-├─────┼──────────────┼─────────┼─────────┤
-│ 0   │ trawistats   │ online  │ 0       │
-└─────┴──────────────┴─────────┴─────────┘
-```
-
----
-
-## Paso 7: Nginx (Simplificado al Máximo)
-
-### 7.1 Instalar Nginx
-```bash
-apt install -y nginx
-```
-
-### 7.2 Crear configuración del sitio
-```bash
-nano /etc/nginx/sites-available/trawistats
-```
-
-Pega esto (copia-pega tal cual, solo cambia la IP si es diferente):
-```nginx
-server {
-    listen 80;
-    server_name YOUR_DOMAIN;  # e.g., stats.example.com
-
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-    }
-}
-```
-
-Guarda con `Ctrl+O`, `Enter`, `Ctrl+X`
-
-### 7.3 Activar el sitio
-```bash
-ln -s /etc/nginx/sites-available/trawistats /etc/nginx/sites-enabled/
-```
-
-### 7.4 Verificar configuración
-```bash
-nginx -t
-```
-
-Debe decir: `syntax is ok` y `test is successful`
-
-### 7.5 Reiniciar Nginx
-```bash
-systemctl restart nginx
-```
-
----
-
-## Paso 8: Configurar DNS
-
-Configura un registro A en tu proveedor de DNS apuntando a la IP de tu droplet:
-
-1. Ve a tu proveedor de DNS (Cloudflare, Netlify, Namecheap, etc.)
-2. Agrega un nuevo registro DNS:
-   - **Type**: A Record
-   - **Name**: tu subdominio (e.g., `stats`)
-   - **Value**: la IP de tu droplet
-   - **TTL**: 3600 (o Automatic)
-
-3. Espera 5-10 minutos para la propagación DNS.
-
----
-
-## Paso 9: Instalar SSL (HTTPS) con Certbot
-
-```bash
-apt install -y certbot python3-certbot-nginx
-certbot --nginx -d YOUR_DOMAIN
-```
-
-Sigue las instrucciones:
-- Email: tu email
-- Términos: `A` (Agree)
-- Compartir email: `N` (No)
-- Redirect HTTP a HTTPS: `2` (Sí, recomendado)
-
-Certbot configurará automáticamente Nginx para HTTPS.
-
----
-
-## Paso 10: Verificar que Todo Funciona
-
-1. Abre tu navegador y ve a: `https://YOUR_DOMAIN`
-2. Deberías ver tu dashboard de TrawiStats funcionando.
-
----
-
-## Comandos Útiles para Mantenimiento
-
-### Ver logs de la aplicación
-```bash
-pm2 logs trawistats
-```
-
-### Reiniciar la app (después de hacer cambios)
-```bash
-cd /var/www/trawistats
-git pull
-npm install
-npm run build
-pm2 restart trawistats
-```
-
-### Ver estado de Nginx
-```bash
-systemctl status nginx
-```
-
-### Renovar SSL (automático, pero por si acaso)
-```bash
-certbot renew --dry-run
-```
-
----
-
-## Troubleshooting
-
-### Si la app no carga:
-```bash
-pm2 logs trawistats --lines 50
-```
-Busca errores en rojo.
-
-### Si Nginx da error:
-```bash
-nginx -t
-tail -f /var/log/nginx/error.log
-```
-
-### Si el dominio no resuelve:
-```bash
-dig stats.trawi.net
-```
-Debe mostrar tu IP. Si no, espera más tiempo (DNS puede tardar hasta 24h, pero usualmente 10 min).
-
----
-
-## Backup Automático (Opcional pero Recomendado)
-
-### Crear script de backup
-```bash
-nano /root/backup-trawistats.sh
-```
-
-Pega esto:
-```bash
-#!/bin/bash
-DATE=$(date +%Y%m%d_%H%M%S)
-tar -czf /root/backups/trawistats_$DATE.tar.gz /var/www/trawistats/data
-find /root/backups -name "trawistats_*.tar.gz" -mtime +7 -delete
-```
-
-Guarda y dale permisos:
-```bash
-chmod +x /root/backup-trawistats.sh
-mkdir -p /root/backups
-```
-
-### Programar backup diario (3 AM)
-```bash
-crontab -e
-```
-
-Agrega esta línea:
-```
-0 3 * * * /root/backup-trawistats.sh
-```
-
----
-
-## Actualizaciones Automáticas de Seguidores
-
-El sistema actualiza la estadística de seguidores automáticamente mediante cron jobs.
-
-### Configuración actual (Diciembre 2024)
-
-```bash
-# Ver configuración actual
-crontab -l
-```
-
-**Cron jobs configurados:**
-```
-# Actualizar cada 2 horas
-0 */2 * * * curl -s "http://localhost:3000/api/followers?username=YOUR_USERNAME" > /dev/null 2>&1
-
-# Sync fin de día 23:51 Venezuela = 03:51 UTC
-51 3 * * * curl -s "http://localhost:3000/api/followers?username=YOUR_USERNAME" > /dev/null 2>&1
-```
-
-### Cómo funciona
-
-1. **Cron cada 2 horas**: Hace un request al API, forzando actualización si el caché de 2 horas expiró
-2. **Cron 23:51 Venezuela**: Dispara el "End of Day sync" - la lógica en `instagram-service.ts` detecta que está en la ventana 23:50-23:59 y fuerza actualización
-3. **El código interno** (la ventana de fin de día dentro de `fetchProfile`, en `lib/instagram-service.ts`) marca `lastEndOfDaySync` para no repetir el sync ese día
-
-### Verificar que funciona
-```bash
-pm2 logs trawistats --lines 50
-```
-Buscar: `Fetching fresh data`, `[End of Day] Force updating`
-
----
-
-## Estabilidad del Servidor (512MB RAM)
-
-### PM2 con límite de memoria
-```bash
-pm2 start npm --name "trawistats" --max-memory-restart 150M -- start
-```
-Reinicia automáticamente si supera 150MB RAM.
-
-### Rotación de logs (evita llenar disco)
-```bash
-pm2 install pm2-logrotate
-pm2 set pm2-logrotate:max_size 5M
-pm2 set pm2-logrotate:retain 3
-```
-
-### Si el servidor se cuelga
-```bash
-# Verificar estado
-pm2 status
-pm2 logs trawistats --lines 100
-
-# Reiniciar si es necesario
-pm2 restart trawistats
-
-# Si PM2 se corrompió
-pm2 kill
-pm2 start npm --name "trawistats" --max-memory-restart 150M -- start
-pm2 save
-```
-
----
-
----
-
-**¡Listo!** Tu aplicación está en producción.

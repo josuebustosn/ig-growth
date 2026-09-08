@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -41,11 +42,7 @@ yarn-error.log*
 next-env.d.ts
 
 
-# TrawiStats specific
-*.pyc
-__pycache__/
-.Python
+# App specific
 /data/
-*.pdf
-debug_error.log
+/shots/
 

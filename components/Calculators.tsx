@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { formatCount, formatMoney } from '@/lib/format';
 
 interface DailyStats {
     date: string;
@@ -32,7 +33,7 @@ function AnimatedCost({ value }: { value: number }) {
         requestAnimationFrame(animate);
     }, [value]);
 
-    return <>{display.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</>;
+    return <>{formatMoney(display)}</>;
 }
 
 export default function Calculators({ currentFollowers, history, loading = false }: { currentFollowers: number, history: DailyStats[], loading?: boolean }) {
@@ -50,7 +51,7 @@ export default function Calculators({ currentFollowers, history, loading = false
     const formatMilestone = (num: number) => {
         if (num >= 1000000) return `${(num / 1000000).toFixed(0)}M`;
         if (num >= 1000) return `${(num / 1000).toFixed(0)}k`;
-        return num.toLocaleString('es-ES');
+        return formatCount(num);
     };
 
     if (loading) {
@@ -93,7 +94,7 @@ export default function Calculators({ currentFollowers, history, loading = false
                             padding: '0.8rem',
                             borderRadius: '8px',
                             border: '1px solid var(--card-border)',
-                            background: 'rgba(0,0,0,0.2)',
+                            background: 'var(--control-bg)',
                             color: 'var(--foreground)',
                             fontSize: '1.1rem'
                         }}
@@ -114,8 +115,8 @@ export default function Calculators({ currentFollowers, history, loading = false
                                     alignItems: 'center',
                                     padding: '0.8rem',
                                     background: isCompleted 
-                                        ? 'rgba(16, 185, 129, 0.15)' 
-                                        : 'rgba(255,255,255,0.05)',
+                                        ? 'color-mix(in srgb, var(--success) 15%, transparent)' 
+                                        : 'color-mix(in srgb, var(--foreground) 5%, transparent)',
                                     borderRadius: '8px',
                                     border: isCompleted 
                                         ? '1px solid var(--success)' 

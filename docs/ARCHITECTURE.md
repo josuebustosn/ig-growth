@@ -1,49 +1,76 @@
-# Arquitectura de TrawiStats
+# Arquitectura
 
-TrawiStats es una aplicación web construida con **Next.js 16** (App Router) diseñada para monitorear el crecimiento de seguidores de cualquier cuenta de Instagram (configurable via `NEXT_PUBLIC_INSTAGRAM_USERNAME`).
+Next.js 16 con App Router. Todo el estado vive en dos documentos JSON; no hay base de datos.
 
-## Estructura General
+## Mapa
 
-El proyecto sigue una arquitectura moderna de Next.js:
+```
+app/
+  layout.tsx              Metadata, inyección de los 6 colores de marca a CSS, bootstrap del tema
+  page.tsx                Composición del dashboard, polling cada 60 s
+  globals.css             Toda la paleta derivada con color-mix()
+  api/followers/route.ts  Lo que consume el navegador
+  api/cron/refresh/       Lo que dispara Vercel Cron
 
-- **Frontend**: React Components (`app/`, `components/`)
-- **Backend (API)**: Next.js Route Handlers (`app/api/`)
-- **Data Fetching**: Cliente de Apify (`apify-client`)
-- **Persistencia**: Archivos JSON locales (`data/`)
+lib/
+  brand.ts                Identidad: nombre, logos, dominio, cuenta, colores
+  format.ts               Formato de números, en un solo lugar
+  instagram-service.ts    Apify + caché + ventana de cierre de día
+  refresh.ts              Camino compartido entre la ruta pública y el cron
+  storage.ts              Selector: Blob si hay token, disco si no
+  storage-disk.ts         Backend de archivos
+  storage-blob.ts         Backend de Vercel Blob, con CAS
 
-## Flujo de Datos
+components/               FollowerCounter · GrowthCalendar · Calculators
+                          ProjectionChart · ShareMetrics · ThemeToggle
+```
 
-1.  **Cliente (Frontend)**:
-    - `app/page.tsx` carga y consulta `/api/followers` cada 60 segundos.
-    - Muestra los datos usando componentes visuales (`FollowerCounter`, `GrowthCalendar`, `ProjectionChart`).
+## El camino de los datos
 
-2.  **API (`app/api/followers/route.ts`)**:
-    - Recibe la petición del cliente.
-    - Llama a `lib/instagram-service.ts`.
+`getInstagramProfile()` es la única puerta al scraping y hace tres cosas en orden:
 
-3.  **Servicio (`lib/instagram-service.ts`)**:
-    - **Paso 1 (Caché)**: Consulta `lib/storage.ts` para ver si hay datos recientes (menos de 2 horas).
-    - **Paso 2 (Fetch)**: Si los datos son viejos, llama a la API de Apify con `apify-client`.
-    - **Paso 3 (Guardado)**: Guarda el nuevo dato en `data/history.json` y actualiza la caché en `data/cache.json`.
+1. **Deduplicación en proceso.** Un `Map` de promesas en vuelo: si llegan dos pedidos para la misma cuenta a la vez, el segundo se cuelga del primero. Es por instancia, no global — con Fluid Compute las instancias se reutilizan, así que ayuda, pero la defensa real contra el gasto es el TTL.
 
-4.  **Cliente de Apify (`fetchFollowersFromApify` en `lib/instagram-service.ts`)**:
-    - Usa la librería `apify-client` de npm.
-    - Se conecta a la API de Apify usando el token `APIFY_TOKEN`.
-    - Ejecuta el actor `instagram-scraper` para el usuario configurado, esperando como máximo `APIFY_WAIT_SECS` segundos (default: 50).
-    - Verifica que el run haya terminado con estado `SUCCEEDED` antes de leer el dataset.
-    - Devuelve el número de seguidores como `number`.
+2. **Caché con ventana de cierre de día.** TTL de 2 horas. Entre las 23:50 y las 23:59 hora de Venezuela se fuerza una actualización si todavía no se sincronizó ese día, para que el número con el que cierra la fecha quede registrado.
 
-## Componentes Clave
+3. **Fallback con backoff.** Si Apify falla y hay algo en caché, se devuelve el valor viejo y se reescribe el TTL a 15 minutos. Eso evita que cada visita durante una caída dispare un scrape nuevo.
 
--   **`FollowerCounter`**: Muestra el número actual grande.
--   **`GrowthCalendar`**: Visualización tipo GitHub de los cambios diarios.
--   **`ProjectionChart`**: Gráfico de línea con proyección futura basada en el promedio de los últimos 14 días.
--   **`Calculators`**: Herramientas para calcular costos por seguidor (CPF) y estimaciones.
+## Persistencia
 
-## Tecnologías
+`storage.ts` elige backend por la presencia de `BLOB_READ_WRITE_TOKEN`, en cada llamada y no al cargar el módulo, para que la decisión no dependa del orden en que se puebla el entorno. El módulo de Blob se importa dinámicamente, así que un despliegue en disco nunca carga `@vercel/blob`.
 
--   **Framework**: Next.js 15
--   **Lenguaje**: TypeScript
--   **Estilos**: CSS Modules / Global CSS (Diseño Glassmorphism)
--   **Gráficos**: Recharts
--   **Scraping**: Apify Client (`apify-client`)
+**Las lecturas de Blob llevan `useCache: false`.** Sobrescribir un blob tarda hasta 60 segundos en propagar y `get()` puede servir la versión anterior en esa ventana — cada ciclo read-modify-write perdería actualizaciones en silencio. Las lecturas consistentes **solo existen en stores privados**, y de ahí la exigencia de que el store sea privado.
+
+**`history.json` se escribe con compare-and-swap** (`ifMatch` + reintento). Cada escritura reemplaza el documento entero, así que una actualización perdida se llevaría entradas de otros días. `cache.json` va last-write-wins: es reconstruible.
+
+**Documento corrupto, política distinta por clave.** Que un blob no exista y que exista pero no parsee no son lo mismo:
+
+| Clave | Si no parsea | Por qué |
+|---|---|---|
+| `history.json` | lanza | Es el único registro que no se rehace. Devolver vacío daría `etag: null`, la escritura saldría sin `ifMatch` y reemplazaría el documento sin que nada la frene |
+| `cache.json` | sigue como vacío | Es reconstruible. Lanzar rompería el propio camino de recuperación, que vuelve a leer la caché para servir un valor viejo |
+
+## Marca y color
+
+`lib/brand.ts` lee la identidad del entorno con valores por defecto. Seis colores se entregan a CSS una sola vez, como custom properties, en `app/layout.tsx`. `globals.css` deriva de ahí cada superficie, borde, tinte y estado con `color-mix()`.
+
+Derivar en vez de listar no es preferencia: los dos temas necesitan tratar el mismo color de marca de forma distinta. El púrpura primario sobre el fondo oscuro da ~1,6:1 y no se lee, así que el modo oscuro lo mezcla hacia el color claro hasta pasar AA; el lime es el caso inverso. Listar esos pares a mano cablearía la paleta de una marca concreta.
+
+El canvas de `ShareMetrics` es la excepción: no entiende `color-mix()` ni `var()`, así que ahí se mezcla en JavaScript con dos helpers (`withAlpha`, `mixWith`) sobre los mismos valores de `brand.colors`.
+
+## Los crons
+
+`vercel.json` agenda dos, ambos a `/api/cron/refresh`:
+
+| Schedule (UTC) | Local (UTC-4) | Para qué |
+|---|---|---|
+| `0 */2 * * *` | cada 2 h | Mantener la caché caliente sin depender de visitas |
+| `55 3 * * *` | 23:55 | Caer dentro de la ventana de cierre de día |
+
+La ruta del cron y la del navegador comparten `refreshAndRecord()`, así que el cron no es una segunda implementación que pueda desviarse de la que usan las personas.
+
+## Lo que se paga y no se usaba
+
+El Actor de Apify devuelve `profilePic`, `userFullName`, `followsCount`, `userUrl` y `userId`. Hasta la v2 el servicio los descartaba y devolvía una foto vacía, `following: 0` y el handle como nombre. Ahora se guardan en la caché junto al conteo — ya estaban pagados.
+
+Cuando la cuenta no existe o es privada, el Actor **no falla la corrida**: devuelve un item con `{ url, username, error, errorDescription }` y un HTTP 200. Ese campo `error` es lo único que distingue el caso, y por eso se chequea explícitamente.

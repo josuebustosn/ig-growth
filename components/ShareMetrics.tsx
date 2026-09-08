@@ -1,7 +1,31 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { brand } from '@/lib/brand';
+import { brand, shareBackground } from '@/lib/brand';
+import { formatCount, formatDelta } from '@/lib/format';
+
+function toRgb(hexColor: string): [number, number, number] {
+    const h = hexColor.replace('#', '');
+    const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h.slice(0, 6);
+    const n = parseInt(full, 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+/** Canvas has no color-mix(); `amount` is how far to travel from a toward b. */
+function mixWith(a: string, b: string, amount: number): string {
+    const [r1, g1, b1] = toRgb(a);
+    const [r2, g2, b2] = toRgb(b);
+    const m = (x: number, y: number) => Math.round(x + (y - x) * amount);
+    return `rgb(${m(r1, r2)}, ${m(g1, g2)}, ${m(b1, b2)})`;
+}
+
+// Canvas has no color-mix(), so brand hex values are given an alpha channel here.
+function withAlpha(hexColor: string, alpha: number): string {
+    const h = hexColor.replace('#', '');
+    const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h.slice(0, 6);
+    const n = parseInt(full, 16);
+    return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}
 
 interface ShareMetricsProps {
     currentFollowers: number;
@@ -127,11 +151,11 @@ export default function ShareMetrics({ currentFollowers, history, username, load
         canvas.width = size;
         canvas.height = size;
 
-        if (brand.shareBackground.startsWith('#')) {
+        if (shareBackground.startsWith('#')) {
             // Solid brand color. No blur and no darkening overlay: both exist to
             // make text readable over a photo, and the 80% black overlay below
             // would crush any brand color to near-black (#0F032D -> #030109).
-            ctx.fillStyle = brand.shareBackground;
+            ctx.fillStyle = shareBackground;
             ctx.fillRect(0, 0, size, size);
         } else {
             // Load background image
@@ -141,7 +165,7 @@ export default function ShareMetrics({ currentFollowers, history, username, load
             await new Promise<void>((resolve) => {
                 bgImage.onload = () => resolve();
                 bgImage.onerror = () => resolve();
-                bgImage.src = brand.shareBackground;
+                bgImage.src = shareBackground;
             });
 
             // Draw background image
@@ -157,8 +181,8 @@ export default function ShareMetrics({ currentFollowers, history, username, load
 
         // Accent line at top
         const accentGradient = ctx.createLinearGradient(0, 0, size, 0);
-        accentGradient.addColorStop(0, '#3291ff');
-        accentGradient.addColorStop(1, '#d946ef');
+        accentGradient.addColorStop(0, brand.colors.primary);
+        accentGradient.addColorStop(1, brand.colors.accent);
         ctx.fillStyle = accentGradient;
         ctx.fillRect(0, 0, size, 5);
 
@@ -179,25 +203,75 @@ export default function ShareMetrics({ currentFollowers, history, username, load
         ctx.globalAlpha = 1.0;
 
         // Main metric with gradient color (aligned with text below)
-        const changeText = (metrics.change >= 0 ? '+' : '') + metrics.change.toLocaleString('en-US');
+        const changeText = formatDelta(metrics.change);
         ctx.font = 'bold 120px Inter, system-ui, sans-serif';
 
-        // Create gradient for the number
-        const textGradient = ctx.createLinearGradient(40, 200, 400, 320);
-        textGradient.addColorStop(0, '#3291ff');
-        textGradient.addColorStop(1, '#d946ef');
-        ctx.fillStyle = metrics.change >= 0 ? textGradient : '#f87171';
+        // The gradient is monochrome on purpose. Running it between two distant
+        // hues (the lilac accent and the lime positive) mixes through grey in the
+        // middle, which is exactly where the digits are — the number faded out
+        // halfway across. Interpolating one hue toward white keeps every stop
+        // bright. The span is measured from the text itself, so the far stop lands
+        // on the last glyph instead of somewhere past it.
+        const textWidth = ctx.measureText(changeText).width;
+        const base = metrics.change >= 0 ? brand.colors.positive : brand.colors.negative;
+        const textGradient = ctx.createLinearGradient(28, 0, 28 + textWidth, 0);
+        textGradient.addColorStop(0, base);
+        textGradient.addColorStop(1, mixWith(base, brand.colors.light, 0.45));
+        ctx.fillStyle = textGradient;
         ctx.fillText(changeText, 28, 280);
 
         // Label with "en @<username>" (aligned with number)
-        ctx.fillStyle = '#ffffff';
+        ctx.fillStyle = brand.colors.light;
         ctx.font = '28px Inter, system-ui, sans-serif';
         ctx.fillText('seguidores ' + metrics.label.toLowerCase() + ' en @' + username, 40, 330);
 
         // Total followers
-        ctx.fillStyle = '#a1a1a1';
+        ctx.fillStyle = withAlpha(brand.colors.light, 0.72);
         ctx.font = '20px Inter, system-ui, sans-serif';
-        ctx.fillText(`Total: ${currentFollowers.toLocaleString('en-US')} seguidores en Instagram`, 40, 390);
+        ctx.fillText(`Total: ${formatCount(currentFollowers)} seguidores en Instagram`, 40, 390);
+
+        // Sparkline of the period. The lower half was empty once the background
+        // stopped being a photograph, and the data is already in hand — a picture
+        // of the trend says more than another line of text.
+        const series = history.slice(-30).map((h) => h.followers);
+        if (series.length >= 2) {
+            const left = 40, right = size - 40;
+            const top = 430, bottom = 520;
+            const min = Math.min(...series), max = Math.max(...series);
+            const span = max - min || 1;
+            const x = (i: number) => left + (i / (series.length - 1)) * (right - left);
+            const y = (v: number) => bottom - ((v - min) / span) * (bottom - top);
+
+            // Filled area first, so the stroke sits on top of it.
+            const fill = ctx.createLinearGradient(0, top, 0, bottom);
+            fill.addColorStop(0, withAlpha(brand.colors.accent, 0.35));
+            fill.addColorStop(1, withAlpha(brand.colors.accent, 0));
+            ctx.beginPath();
+            ctx.moveTo(x(0), bottom);
+            series.forEach((v, i) => ctx.lineTo(x(i), y(v)));
+            ctx.lineTo(x(series.length - 1), bottom);
+            ctx.closePath();
+            ctx.fillStyle = fill;
+            ctx.fill();
+
+            ctx.beginPath();
+            series.forEach((v, i) => (i ? ctx.lineTo(x(i), y(v)) : ctx.moveTo(x(i), y(v))));
+            ctx.strokeStyle = brand.colors.positive;
+            ctx.lineWidth = 3;
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+            ctx.stroke();
+
+            // A dot on the latest point, so the eye lands on "today".
+            ctx.beginPath();
+            ctx.arc(x(series.length - 1), y(series[series.length - 1]), 5, 0, Math.PI * 2);
+            ctx.fillStyle = brand.colors.positive;
+            ctx.fill();
+
+            ctx.fillStyle = withAlpha(brand.colors.light, 0.45);
+            ctx.font = '13px Inter, system-ui, sans-serif';
+            ctx.fillText(`Últimos ${series.length} días`, left, top - 12);
+        }
 
         // Date at bottom left (with year)
         const dateWithYear = new Date().toLocaleDateString('es-ES', {
@@ -206,13 +280,13 @@ export default function ShareMetrics({ currentFollowers, history, username, load
             year: 'numeric',
             timeZone: 'America/Caracas'
         });
-        ctx.fillStyle = '#888888';
+        ctx.fillStyle = withAlpha(brand.colors.light, 0.5);
         ctx.font = '14px Inter, system-ui, sans-serif';
         ctx.fillText(dateWithYear, 40, size - 30);
 
         // Watermark - bottom right
         ctx.textAlign = 'right';
-        ctx.fillText(`${brand.name} 1.3 ©`, size - 40, size - 50);
+        ctx.fillText(`${brand.fullName} v${brand.version}`, size - 40, size - 50);
         ctx.fillText(brand.shareDomain, size - 40, size - 30);
         ctx.textAlign = 'left';
 
@@ -272,7 +346,7 @@ export default function ShareMetrics({ currentFollowers, history, username, load
             try {
                 await navigator.share({
                     files: [file],
-                    title: brand.name,
+                    title: brand.fullName,
                     text: `Mira mi crecimiento en @${username}!`
                 });
                 showFeedback('share');
@@ -301,7 +375,7 @@ export default function ShareMetrics({ currentFollowers, history, username, load
             try {
                 await navigator.share({
                     files: [file],
-                    title: brand.name,
+                    title: brand.fullName,
                     text: `Mira mi crecimiento en @${username}!`
                 });
                 showFeedback('share');
@@ -382,13 +456,13 @@ export default function ShareMetrics({ currentFollowers, history, username, load
                                 : '1px solid var(--card-border)',
                             cursor: 'pointer',
                             background: period === p.value
-                                ? 'rgba(50, 145, 255, 0.12)'
+                                ? 'color-mix(in srgb, var(--primary) 12%, transparent)'
                                 : 'transparent',
                             color: period === p.value ? 'var(--primary)' : 'var(--text-muted)',
                             fontWeight: period === p.value ? '600' : '400',
                             transition: 'all 0.25s ease',
                             boxShadow: period === p.value
-                                ? '0 0 12px rgba(50, 145, 255, 0.2)'
+                                ? '0 0 12px color-mix(in srgb, var(--primary) 20%, transparent)'
                                 : 'none',
                         }}
                     >
@@ -399,20 +473,20 @@ export default function ShareMetrics({ currentFollowers, history, username, load
 
             {/* Preview */}
             <div style={{
-                background: 'linear-gradient(135deg, #0a0a0a, #1a1a2e)',
+                background: 'linear-gradient(135deg, var(--brand-dark), color-mix(in srgb, var(--brand-primary) 22%, var(--brand-dark)))',
                 borderRadius: '8px',
                 padding: '1rem',
                 marginBottom: '1rem',
                 textAlign: 'center'
             }}>
                 <div key={period} style={{ animation: 'fadeIn 0.3s ease-out' }}>
-                    <p style={{ fontSize: '0.8rem', color: '#a1a1a1', marginBottom: '0.5rem' }}>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
                         {getMetrics().dateRange}
                     </p>
                     <p style={{
                         fontSize: '2rem',
                         fontWeight: 'bold',
-                        color: getMetrics().change >= 0 ? '#34d399' : '#f87171'
+                        color: getMetrics().change >= 0 ? 'var(--success)' : 'var(--danger)'
                     }}>
                         {getMetrics().change >= 0 ? '+' : ''}{getMetrics().change}
                     </p>
@@ -432,7 +506,7 @@ export default function ShareMetrics({ currentFollowers, history, username, load
                         padding: '0.7rem',
                         borderRadius: '8px',
                         cursor: 'pointer',
-                        background: 'rgba(50, 145, 255, 0.15)',
+                        background: 'color-mix(in srgb, var(--primary) 15%, transparent)',
                         border: '1px solid var(--primary)',
                         color: 'var(--primary)',
                         fontWeight: '600',
